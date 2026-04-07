@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math SRW: EVA Tactical Interface (Explosion Update)</title>
+    <title>Math SRW: EVA Tactical Interface (Level System Update)</title>
     <!-- 引入 Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 React, ReactDOM 與 Babel -->
@@ -74,14 +74,17 @@
 
         const BG_IMAGE_URL = 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1200&q=80';
         const ENEMY_IMAGE_URL = './img/enemy.png'; 
+        const ALLY_IMAGE_URL = './img/alliance.png'; // 士兵/友軍圖示
 
         const App = () => {
             const canvasRef = useRef(null);
             const containerRef = useRef(null);
             const enemyImgRef = useRef(null);
+            const allyImgRef = useRef(null);
             const bgImgRef = useRef(null);
             
-            const [userInput, setUserInput] = useState('0.5x + 1');
+            const [level, setLevel] = useState(1);
+            const [userInput, setUserInput] = useState('x^2');
             const [message, setMessage] = useState('MAGI 系統已連線。等待指令。');
             const [isAssetsLoaded, setIsAssetsLoaded] = useState(false);
             const [isFiring, setIsFiring] = useState(false);
@@ -90,16 +93,45 @@
             const [canvasSize, setCanvasSize] = useState({ width: 800, height: 450 });
             const gridScale = 40; 
 
-            // 敵人狀態與爆炸動畫隊列
-            const [enemies, setEnemies] = useState([
-                { id: 1, x: 5, y: 4, alive: true, label: '使徒-A' },
-                { id: 2, x: -6, y: 3, alive: true, label: '使徒-B' },
-                { id: 3, x: 3, y: -5, alive: true, label: '使徒-C' },
-                { id: 4, x: -4, y: -2, alive: true, label: '使徒-D' }
-            ]);
+            // 關卡數據定義
+            const levelData = {
+                1: {
+                    enemies: [{ id: 1, x: 4, y: 16, alive: true, label: '第3使徒' }, { id: 2, x: -4, y: 16, alive: true, label: '第4使徒' }],
+                    allies: [],
+                    hint: "提示：使用二次函數 x^2 進行雙重打擊"
+                },
+                2: {
+                    enemies: [{ id: 3, x: 5, y: 3, alive: true, label: '第5使徒' }, { id: 4, x: -5, y: -2, alive: true, label: '第6使徒' }],
+                    allies: [],
+                    hint: "提示：線性函數 0.5x + 0.5"
+                },
+                3: {
+                    enemies: [{ id: 5, x: 7, y: 2, alive: true, label: '第7使徒' }, { id: 6, x: -7, y: 2, alive: true, label: '第8使徒' }],
+                    allies: [{ id: 101, x: 0, y: 3, label: '初號機' }], // 士兵在中間
+                    hint: "危險：避免擊中坐標 (0, 3) 的友軍！使用 |x| 相關公式。"
+                },
+                4: {
+                    enemies: [{ id: 7, x: 6, y: 4, alive: true, label: '第9使徒' }, { id: 8, x: -8, y: -3, alive: true, label: '第10使徒' }],
+                    allies: [{ id: 102, x: 2, y: 2, label: '士兵A' }, { id: 103, x: -2, y: -2, label: '士兵B' }],
+                    hint: "最終作戰：精密彈道控制。避開友軍方陣。"
+                }
+            };
+
+            const [enemies, setEnemies] = useState(levelData[1].enemies);
+            const [allies, setAllies] = useState(levelData[1].allies);
             const [explosions, setExplosions] = useState([]);
 
             const animationRef = useRef(null);
+
+            // 初始化關卡
+            useEffect(() => {
+                const current = levelData[level];
+                if (current) {
+                    setEnemies(current.enemies);
+                    setAllies(current.allies);
+                    setMessage(`關卡 ${level}: ${current.hint}`);
+                }
+            }, [level]);
 
             useEffect(() => {
                 const handleResize = () => {
@@ -118,25 +150,34 @@
                 let loadedCount = 0;
                 const checkAllLoaded = () => {
                     loadedCount++;
-                    if (loadedCount >= 2) setIsAssetsLoaded(true);
+                    if (loadedCount >= 3) setIsAssetsLoaded(true);
                 };
-                const eImg = new Image(); eImg.src = ENEMY_IMAGE_URL; eImg.onload = () => { enemyImgRef.current = eImg; checkAllLoaded(); };
-                const bImg = new Image(); bImg.src = BG_IMAGE_URL; bImg.onload = () => { bgImgRef.current = bImg; checkAllLoaded(); };
+                
+                // 修正：加入 onerror 確保即使圖片失效，遊戲也能正常啟動並使用後備圖形
+                const eImg = new Image(); eImg.src = ENEMY_IMAGE_URL; 
+                eImg.onload = () => { enemyImgRef.current = eImg; checkAllLoaded(); };
+                eImg.onerror = checkAllLoaded;
+
+                const aImg = new Image(); aImg.src = ALLY_IMAGE_URL; 
+                aImg.onload = () => { allyImgRef.current = aImg; checkAllLoaded(); };
+                aImg.onerror = checkAllLoaded;
+
+                const bImg = new Image(); bImg.src = BG_IMAGE_URL; 
+                bImg.onload = () => { bgImgRef.current = bImg; checkAllLoaded(); };
+                bImg.onerror = checkAllLoaded;
                 
                 const timer = setInterval(() => {
-                    setInternalPower(prev => prev > 0 ? prev - 0.1 : 0);
+                    setInternalPower(prev => prev > 0 ? prev - 0.05 : 0);
                 }, 1000);
                 return () => clearInterval(timer);
             }, []);
 
-            // 繪製基礎圖層與動畫
-            const drawFrame = (ctx, currentEnemies, currentExplosions, width, height) => {
+            const drawFrame = (ctx, currentEnemies, currentAllies, currentExplosions, width, height) => {
                 const centerX = width / 2;
                 const centerY = height / 2;
 
                 ctx.clearRect(0, 0, width, height);
 
-                // 1. 背景
                 if (bgImgRef.current) {
                     const img = bgImgRef.current;
                     const scale = Math.max(width / img.width, height / img.height);
@@ -147,7 +188,6 @@
                     ctx.fillRect(0, 0, width, height);
                 }
 
-                // 2. 網格
                 ctx.strokeStyle = 'rgba(251, 146, 60, 0.15)';
                 ctx.lineWidth = 1;
                 for (let x = centerX % gridScale; x < width; x += gridScale) {
@@ -157,42 +197,70 @@
                     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
                 }
 
-                // 3. 軸線
                 ctx.strokeStyle = '#fb923c';
                 ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(width, centerY); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height); ctx.stroke();
                 
-                // 4. 敵人
+                // 繪製敵人
                 currentEnemies.forEach(en => {
                     if (!en.alive) return;
                     const sx = centerX + en.x * gridScale;
                     const sy = centerY - en.y * gridScale;
-                    if (enemyImgRef.current) ctx.drawImage(enemyImgRef.current, sx - 18, sy - 18, 36, 36);
+                    
+                    if (enemyImgRef.current) {
+                        ctx.drawImage(enemyImgRef.current, sx - 18, sy - 18, 36, 36);
+                    } else {
+                        // 後備圖形
+                        ctx.fillStyle = '#ff4400';
+                        ctx.beginPath(); ctx.arc(sx, sy, 15, 0, Math.PI*2); ctx.fill();
+                    }
+                    
                     ctx.strokeStyle = '#ff4400';
                     ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.arc(sx, sy, 25, 0, Math.PI*2); ctx.stroke();
+                    
                     ctx.fillStyle = '#ff4400';
                     ctx.font = '900 10px sans-serif';
-                    ctx.fillText(`TARGET: ${en.label}`, sx + 30, sy + 5);
+                    // 修正：加入坐標顯示，分行排列更像雷達介面
+                    ctx.fillText(`TARGET: ${en.label}`, sx + 30, sy - 2);
+                    ctx.fillText(`COORD: (${en.x}, ${en.y})`, sx + 30, sy + 10);
                 });
 
-                // 5. 爆炸動畫
+                // 繪製友軍 (士兵)
+                currentAllies.forEach(al => {
+                    const sx = centerX + al.x * gridScale;
+                    const sy = centerY - al.y * gridScale;
+                    
+                    if (allyImgRef.current) {
+                        ctx.drawImage(allyImgRef.current, sx - 16, sy - 16, 32, 32);
+                    } else {
+                        // 後備圖形
+                        ctx.fillStyle = '#00ffff';
+                        ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI*2); ctx.fill();
+                    }
+                    
+                    ctx.strokeStyle = '#00ffff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.setLineDash([5, 3]); ctx.arc(sx, sy, 22, 0, Math.PI*2); ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#00ffff';
+                    ctx.font = '900 10px sans-serif';
+                    // 修正：加入坐標顯示
+                    ctx.fillText(`ALLY: ${al.label}`, sx + 25, sy - 2);
+                    ctx.fillText(`COORD: (${al.x}, ${al.y})`, sx + 25, sy + 10);
+                });
+
+                // 爆炸動畫
                 currentExplosions.forEach(exp => {
                     const sx = centerX + exp.x * gridScale;
                     const sy = centerY - exp.y * gridScale;
                     const radius = exp.frame * 2.5;
                     const alpha = 1 - (exp.frame / 20);
-                    
                     ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 80, 0, ${alpha})`;
-                    ctx.fill();
-                    
-                    ctx.beginPath();
-                    ctx.arc(sx, sy, radius * 0.7, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 200, 0, ${alpha})`;
+                    ctx.beginPath(); ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = exp.type === 'ally' ? `rgba(0, 255, 255, ${alpha})` : `rgba(255, 80, 0, ${alpha})`;
                     ctx.fill();
                     ctx.restore();
                 });
@@ -201,11 +269,10 @@
             useEffect(() => {
                 if (isAssetsLoaded && canvasRef.current) {
                     const ctx = canvasRef.current.getContext('2d');
-                    drawFrame(ctx, enemies, explosions, canvasSize.width, canvasSize.height);
+                    drawFrame(ctx, enemies, allies, explosions, canvasSize.width, canvasSize.height);
                 }
-            }, [enemies, explosions, isAssetsLoaded, canvasSize]);
+            }, [enemies, allies, explosions, isAssetsLoaded, canvasSize]);
 
-            // 更新爆炸動畫幀
             useEffect(() => {
                 if (explosions.length > 0) {
                     const timer = requestAnimationFrame(() => {
@@ -222,6 +289,8 @@
                 if (isFiring) return;
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
+                let isTerminated = false;
+
                 try {
                     const preparedInput = userInput.replace(/(\d)(x)/g, '$1*$2');
                     const node = math.parse(preparedInput);
@@ -234,10 +303,23 @@
                     const centerY = canvasSize.height / 2;
 
                     const animate = () => {
+                        if (isTerminated) return;
+
                         if (currentScreenX > canvasSize.width) {
                             setIsFiring(false);
-                            const allDead = enemies.every(e => !e.alive);
-                            if (allDead) setMessage('>> 使徒完全沈默。任務達成。');
+                            // 檢查是否過關
+                            setEnemies(prev => {
+                                const allDead = prev.every(e => !e.alive);
+                                if (allDead) {
+                                    if (level < 4) {
+                                        setMessage(`>> 目標消滅。準備進入 LEVEL ${level + 1}。`);
+                                        setTimeout(() => setLevel(l => l + 1), 2000);
+                                    } else {
+                                        setMessage('>> 最終目標沈默。任務完全達成！');
+                                    }
+                                }
+                                return prev;
+                            });
                             return;
                         }
                         
@@ -260,22 +342,37 @@
                         const y2 = calcY(endX);
 
                         if (!isNaN(y1) && !isNaN(y2)) {
-                            ctx.beginPath();
-                            ctx.moveTo(startX, y1);
-                            ctx.lineTo(endX, y2);
-                            ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(startX, y1); ctx.lineTo(endX, y2); ctx.stroke();
                         }
                         ctx.shadowBlur = 0;
                         
                         const mathXCurrent = (endX - centerX) / gridScale;
                         
+                        // 檢查是否擊中友軍
+                        allies.forEach(al => {
+                            try {
+                                const weaponY = code.evaluate({ x: al.x });
+                                if (Math.abs(mathXCurrent - al.x) < 0.35 && Math.abs(weaponY - al.y) < 0.6) {
+                                    setExplosions(exps => [...exps, { x: al.x, y: al.y, frame: 0, type: 'ally' }]);
+                                    setMessage(`!!! 警報 !!! 擊中友軍 ${al.label}！任務失敗。系統重置。`);
+                                    isTerminated = true;
+                                    setTimeout(() => {
+                                        resetGame();
+                                        setIsFiring(false);
+                                    }, 1500);
+                                }
+                            } catch(e) {}
+                        });
+
+                        if (isTerminated) return;
+
+                        // 檢查擊中敵人
                         setEnemies(prev => prev.map(en => {
                             if (!en.alive) return en;
                             try {
                                 const targetY = code.evaluate({ x: en.x });
                                 if (Math.abs(mathXCurrent - en.x) < 0.35 && Math.abs(targetY - en.y) < 0.6) {
-                                    // 觸發爆炸
-                                    setExplosions(exps => [...exps, { x: en.x, y: en.y, frame: 0 }]);
+                                    setExplosions(exps => [...exps, { x: en.x, y: en.y, frame: 0, type: 'enemy' }]);
                                     return { ...en, alive: false };
                                 }
                             } catch(e) {}
@@ -293,15 +390,12 @@
             };
 
             const resetGame = () => {
-                setEnemies([
-                    { id: 1, x: 5, y: 4, alive: true, label: '使徒-A' },
-                    { id: 2, x: -6, y: 3, alive: true, label: '使徒-B' },
-                    { id: 3, x: 3, y: -5, alive: true, label: '使徒-C' },
-                    { id: 4, x: -4, y: -2, alive: true, label: '使徒-D' }
-                ]);
+                const current = levelData[level];
+                setEnemies(current.enemies.map(e => ({...e, alive: true})));
+                setAllies(current.allies);
                 setExplosions([]);
                 setInternalPower(100);
-                setMessage('系統重啟。S2機關同步中。');
+                setMessage(`系統重啟。Level ${level}: ${current.hint}`);
                 if (animationRef.current) cancelAnimationFrame(animationRef.current);
                 setIsFiring(false);
             };
@@ -311,9 +405,15 @@
                     {/* 頂部狀態欄 */}
                     <div className="w-full max-w-5xl flex justify-between items-end mb-2 border-b-4 border-orange-500 pb-2">
                         <div className="text-4xl md:text-6xl font-black italic tracking-tighter">NERV <span className="text-xl not-italic font-normal tracking-widest ml-4 hidden md:inline">TACTICAL MONITOR</span></div>
-                        <div className="text-right">
-                            <div className="text-xs uppercase font-bold">Internal Power</div>
-                            <div className="text-2xl font-black">{internalPower.toFixed(1)}%</div>
+                        <div className="text-right flex items-center gap-6">
+                            <div className="text-right">
+                                <div className="text-[10px] uppercase font-bold text-orange-700">Level Progression</div>
+                                <div className="text-2xl font-black">{level} / 4</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[10px] uppercase font-bold text-orange-700">Internal Power</div>
+                                <div className="text-2xl font-black">{internalPower.toFixed(1)}%</div>
+                            </div>
                         </div>
                     </div>
 
@@ -321,7 +421,7 @@
                     <div className="relative w-full max-w-5xl flex gap-2">
                         <div className="hidden lg:flex flex-col gap-2 w-12 text-[10px] bg-orange-500/10 p-1 border border-orange-500/30">
                             <div className="vertical-text h-full text-center py-2 text-orange-500/60 font-bold">MONITORING_SYSTEM_ACTIVE</div>
-                            <div className="bg-orange-500 text-black font-black p-1 text-center">01</div>
+                            <div className="bg-orange-500 text-black font-black p-1 text-center">{level.toString().padStart(2, '0')}</div>
                         </div>
 
                         <div ref={containerRef} className="canvas-container border-4 border-orange-500 overflow-hidden bg-black flex-1">
@@ -339,7 +439,7 @@
                             )}
 
                             <div className="absolute top-2 left-2 text-[10px] text-orange-400 font-bold">SYNC_RATE: 41.3%</div>
-                            <div className="absolute top-2 right-2 text-[10px] text-orange-400 font-bold">PRIORITY: AAA</div>
+                            <div className="absolute bottom-2 right-2 text-[10px] text-cyan-400 font-bold bg-cyan-950/50 px-2">FRIENDLY_FIRE: PROHIBITED</div>
                         </div>
                     </div>
 
@@ -348,7 +448,7 @@
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
                             <div className="lg:col-span-8">
                                 <div className="flex justify-between mb-1">
-                                    <span className="text-xs font-black tracking-widest text-orange-500 uppercase">Weaponry Path Analysis</span>
+                                    <span className="text-xs font-black tracking-widest text-orange-500 uppercase">Weaponry Path Analysis // LEVEL {level}</span>
                                     <span className="text-xs text-orange-800 font-bold">SCALE: 1 UNIT = {gridScale} PX</span>
                                 </div>
                                 <div className="relative flex items-center">
@@ -384,19 +484,19 @@
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center border-t border-orange-500/20 pt-4">
                             <div className="md:col-span-3 flex items-center gap-4">
                                 <div className="bg-orange-600 text-black px-2 py-1 text-xs font-black">SYSTEM_MSG</div>
-                                <div className="text-orange-200 font-bold tracking-widest text-sm overflow-hidden whitespace-nowrap">
+                                <div className={`font-bold tracking-widest text-sm overflow-hidden whitespace-nowrap ${message.includes('警報') ? 'text-red-500 animate-pulse' : 'text-orange-200'}`}>
                                     {message}
                                 </div>
                             </div>
                             <div className="flex justify-end gap-2 text-[9px] text-orange-900 font-black uppercase">
-                                <span>MAGI_CASPER_SYNC</span>
+                                <span>MAGI_CASPER_LEVEL_{level}</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="mt-4 w-full max-w-5xl text-[8px] md:text-[10px] text-orange-900 flex justify-between px-2 uppercase font-bold">
-                        <div>Top Secret // Confidential</div>
-                        <div>(c) 2026 NERV Tech Labs</div>
+                        <div>Top Secret // Classified Tactical Logic</div>
+                        <div>(c) 2026 NERV Tech Labs // Pilot Training Protocol</div>
                     </div>
                 </div>
             );
