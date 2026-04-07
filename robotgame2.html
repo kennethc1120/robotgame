@@ -375,6 +375,7 @@
 
                         if (currentScreenX > canvasSize.width) {
                             setIsFiring(false);
+                            // 檢查是否成功擊破「所有」敵人
                             setEnemies(prev => {
                                 const allDead = prev.every(e => !e.alive);
                                 if (allDead) {
@@ -385,7 +386,11 @@
                                         setMessage('>> 最終目標沈默。所有作戰任務完全達成！');
                                     }
                                 } else {
-                                    setMessage('>> 未能完全殲滅目標。請重新計算彈道。');
+                                    // 若未能一擊全滅，則任務失敗並重置
+                                    setMessage('!!! 警報 !!! 未能一擊殲滅所有目標。任務失敗，系統重置。');
+                                    setTimeout(() => {
+                                        resetGame();
+                                    }, 2000);
                                 }
                                 return prev;
                             });
