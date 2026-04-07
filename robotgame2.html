@@ -93,7 +93,7 @@
             const [canvasSize, setCanvasSize] = useState({ width: 800, height: 450 });
             const gridScale = 40; 
 
-            // 關卡數據定義 (修改了坐標、拿掉絕對值、新增多個友軍)
+            // 關卡數據定義 (包含防禦網 forbidden line)
             const levelData = {
                 1: {
                     enemies: [{ id: 1, x: 2, y: 4, alive: true, label: '第3使徒' }, { id: 2, x: -2, y: 4, alive: true, label: '第4使徒' }],
@@ -122,6 +122,22 @@
                     hint: "目標偏向右側。請平移「二次函數」的頂點，精準穿透防線。",
                     typeReq: "quadratic",
                     errorMsg: "ERROR: 武器不符！指揮部要求使用「二次函數」(需包含 ^2)。"
+                },
+                5: {
+                    enemies: [{ id: 9, x: 2, y: 3, alive: true, label: '第11使徒' }, { id: 10, x: -2, y: 3, alive: true, label: '第12使徒' }],
+                    allies: [{ id: 112, x: 0, y: 1, label: '初號機' }],
+                    forbidden: { y: 0, label: '赤道防禦網 (y=0)' },
+                    hint: "新增絕對防禦網 (y=0)。武器軌跡不可觸碰此直線！",
+                    typeReq: "quadratic",
+                    errorMsg: "ERROR: 武器不符！指揮部要求使用「二次函數」(需包含 ^2)。"
+                },
+                6: {
+                    enemies: [{ id: 11, x: 3, y: -3, alive: true, label: '第13使徒' }, { id: 12, x: -3, y: -3, alive: true, label: '第14使徒' }],
+                    allies: [{ id: 113, x: 0, y: -5, label: 'NERV總部' }],
+                    forbidden: { y: 2, label: '高空防禦網 (y=2)' },
+                    hint: "最終作戰：避開上方防禦網 (y=2) 與下方友軍，精準打擊目標！",
+                    typeReq: "quadratic",
+                    errorMsg: "ERROR: 武器不符！指揮部要求使用「二次函數」(需包含 ^2)。"
                 }
             };
 
@@ -135,7 +151,7 @@
                 const current = levelData[level];
                 if (current) {
                     setEnemies(current.enemies);
-                    setAllies(current.allies);
+                    setAllies(current.allies || []);
                     setMessage(`關卡 ${level} - ${current.hint}`);
                     setUserInput(''); // 每關開始清空輸入
                 }
@@ -209,6 +225,21 @@
                 ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(width, centerY); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height); ctx.stroke();
                 
+                // 繪製不可觸碰的防禦線
+                const currentLevelData = levelData[level];
+                if (currentLevelData && currentLevelData.forbidden) {
+                    const fbY = centerY - currentLevelData.forbidden.y * gridScale;
+                    ctx.strokeStyle = '#ff00ff'; // 紫紅色警告線
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([15, 10]);
+                    ctx.beginPath(); ctx.moveTo(0, fbY); ctx.lineTo(width, fbY); ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.font = '900 12px sans-serif';
+                    ctx.fillText(`WARNING: ${currentLevelData.forbidden.label}`, 20, fbY - 10);
+                }
+
                 currentEnemies.forEach(en => {
                     if (!en.alive) return;
                     const sx = centerX + en.x * gridScale;
@@ -258,9 +289,26 @@
                     const sy = centerY - exp.y * gridScale;
                     const radius = exp.frame * 2.5;
                     const alpha = 1 - (exp.frame / 20);
+                    
                     ctx.save();
                     ctx.beginPath(); ctx.arc(sx, sy, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = exp.type === 'ally' ? `rgba(0, 255, 255, ${alpha})` : `rgba(255, 80, 0, ${alpha})`;
+                    
+                    // 根據引爆類型給予不同顏色的爆炸
+                    let outerColor = `rgba(255, 80, 0, ${alpha})`;
+                    let innerColor = `rgba(255, 200, 0, ${alpha})`;
+                    if (exp.type === 'ally') {
+                        outerColor = `rgba(0, 255, 255, ${alpha})`;
+                        innerColor = `rgba(200, 255, 255, ${alpha})`;
+                    } else if (exp.type === 'forbidden') {
+                        outerColor = `rgba(255, 0, 255, ${alpha})`;
+                        innerColor = `rgba(255, 150, 255, ${alpha})`;
+                    }
+
+                    ctx.fillStyle = outerColor;
+                    ctx.fill();
+                    
+                    ctx.beginPath(); ctx.arc(sx, sy, radius * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = innerColor;
                     ctx.fill();
                     ctx.restore();
                 });
@@ -330,7 +378,7 @@
                             setEnemies(prev => {
                                 const allDead = prev.every(e => !e.alive);
                                 if (allDead) {
-                                    if (level < 4) {
+                                    if (level < 6) {
                                         setMessage(`>> 目標消滅。準備進入 LEVEL ${level + 1}。`);
                                         setTimeout(() => setLevel(l => l + 1), 2000);
                                     } else {
@@ -364,8 +412,26 @@
 
                         if (!isNaN(y1) && !isNaN(y2)) {
                             ctx.beginPath(); ctx.moveTo(startX, y1); ctx.lineTo(endX, y2); ctx.stroke();
+                            
+                            // 檢查是否觸碰絕對防禦網 (Forbidden Line)
+                            if (currentLevelData.forbidden) {
+                                const fScreenY = centerY - currentLevelData.forbidden.y * gridScale;
+                                // 若 y1 和 y2 在防禦線的兩側或剛好觸碰，則判定為碰撞
+                                if ((y1 - fScreenY) * (y2 - fScreenY) <= 0) {
+                                    const hitX = startX + (endX - startX) / 2;
+                                    setExplosions(exps => [...exps, { x: (hitX - centerX)/gridScale, y: currentLevelData.forbidden.y, frame: 0, type: 'forbidden' }]);
+                                    setMessage(`!!! 警報 !!! 武器觸碰 ${currentLevelData.forbidden.label}！任務失敗。系統重置。`);
+                                    isTerminated = true;
+                                    setTimeout(() => {
+                                        resetGame();
+                                        setIsFiring(false);
+                                    }, 1500);
+                                }
+                            }
                         }
                         ctx.shadowBlur = 0;
+                        
+                        if (isTerminated) return;
                         
                         const mathXCurrent = (endX - centerX) / gridScale;
                         
@@ -413,7 +479,7 @@
             const resetGame = () => {
                 const current = levelData[level];
                 setEnemies(current.enemies.map(e => ({...e, alive: true})));
-                setAllies(current.allies);
+                setAllies(current.allies || []);
                 setExplosions([]);
                 setInternalPower(100);
                 setMessage(`系統重啟。Level ${level}: ${current.hint}`);
@@ -428,7 +494,7 @@
                         <div className="text-right flex items-center gap-6">
                             <div className="text-right">
                                 <div className="text-[10px] uppercase font-bold text-orange-700">Level Progression</div>
-                                <div className="text-2xl font-black">{level} / 4</div>
+                                <div className="text-2xl font-black">{level} / 6</div>
                             </div>
                             <div className="text-right">
                                 <div className="text-[10px] uppercase font-bold text-orange-700">Internal Power</div>
@@ -458,7 +524,10 @@
                             )}
 
                             <div className="absolute top-2 left-2 text-[10px] text-orange-400 font-bold">SYNC_RATE: 41.3%</div>
-                            <div className="absolute bottom-2 right-2 text-[10px] text-cyan-400 font-bold bg-cyan-950/50 px-2">FRIENDLY_FIRE: PROHIBITED</div>
+                            <div className="absolute bottom-2 right-2 text-[10px] text-cyan-400 font-bold bg-cyan-950/50 px-2 flex flex-col items-end">
+                                <span>FRIENDLY_FIRE: PROHIBITED</span>
+                                {levelData[level].forbidden && <span className="text-[#ff00ff]">DEFENSE_NET: AVOID {levelData[level].forbidden.y}</span>}
+                            </div>
                         </div>
                     </div>
 
