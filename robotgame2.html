@@ -74,7 +74,7 @@
 
         const BG_IMAGE_URL = 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1200&q=80';
         const ENEMY_IMAGE_URL = './img/enemy.png'; 
-        const ALLY_IMAGE_URL = './img/alliance.png'; // 士兵/友軍圖示
+        const ALLY_IMAGE_URL = './img/alliance.png'; 
 
         const App = () => {
             const canvasRef = useRef(null);
@@ -84,7 +84,7 @@
             const bgImgRef = useRef(null);
             
             const [level, setLevel] = useState(1);
-            const [userInput, setUserInput] = useState('x^2');
+            const [userInput, setUserInput] = useState('');
             const [message, setMessage] = useState('MAGI 系統已連線。等待指令。');
             const [isAssetsLoaded, setIsAssetsLoaded] = useState(false);
             const [isFiring, setIsFiring] = useState(false);
@@ -93,27 +93,35 @@
             const [canvasSize, setCanvasSize] = useState({ width: 800, height: 450 });
             const gridScale = 40; 
 
-            // 關卡數據定義
+            // 關卡數據定義 (修改了坐標、拿掉絕對值、新增多個友軍)
             const levelData = {
                 1: {
-                    enemies: [{ id: 1, x: 4, y: 16, alive: true, label: '第3使徒' }, { id: 2, x: -4, y: 16, alive: true, label: '第4使徒' }],
+                    enemies: [{ id: 1, x: 2, y: 4, alive: true, label: '第3使徒' }, { id: 2, x: -2, y: 4, alive: true, label: '第4使徒' }],
                     allies: [],
-                    hint: "提示：使用二次函數 x^2 進行雙重打擊"
+                    hint: "雙重目標鎖定。請運用「二次函數」的對稱特性進行打擊。",
+                    typeReq: "quadratic",
+                    errorMsg: "ERROR: 武器不符！指揮部要求使用「二次函數」(需包含 ^2)。"
                 },
                 2: {
-                    enemies: [{ id: 3, x: 5, y: 3, alive: true, label: '第5使徒' }, { id: 4, x: -5, y: -2, alive: true, label: '第6使徒' }],
-                    allies: [],
-                    hint: "提示：線性函數 0.5x + 0.5"
+                    enemies: [{ id: 3, x: 4, y: 2, alive: true, label: '第5使徒' }, { id: 4, x: -4, y: -2, alive: true, label: '第6使徒' }],
+                    allies: [{ id: 101, x: -2, y: 2, label: '支援機A' }, { id: 102, x: 2, y: -2, label: '支援機B' }, { id: 103, x: 0, y: 3, label: '運輸艦' }],
+                    hint: "目標呈傾斜直線排列。請設定正確斜率的「線性函數」。",
+                    typeReq: "linear",
+                    errorMsg: "ERROR: 武器不符！此空域僅限使用「線性函數」(不可包含 ^2)。"
                 },
                 3: {
-                    enemies: [{ id: 5, x: 7, y: 2, alive: true, label: '第7使徒' }, { id: 6, x: -7, y: 2, alive: true, label: '第8使徒' }],
-                    allies: [{ id: 101, x: 0, y: 3, label: '初號機' }], // 士兵在中間
-                    hint: "危險：避免擊中坐標 (0, 3) 的友軍！使用 |x| 相關公式。"
+                    enemies: [{ id: 5, x: 3, y: -4, alive: true, label: '第7使徒' }, { id: 6, x: -3, y: -4, alive: true, label: '第8使徒' }],
+                    allies: [{ id: 104, x: 0, y: 0, label: '初號機' }, { id: 105, x: 0, y: -2, label: '零號機' }, { id: 106, x: 2, y: 0, label: '二號機' }, { id: 107, x: -2, y: 0, label: '防衛陣地' }],
+                    hint: "目標位於下方空域，友軍在原點附近。請反轉「二次函數」的開口方向。",
+                    typeReq: "quadratic",
+                    errorMsg: "ERROR: 武器不符！指揮部要求使用「二次函數」(需包含 ^2)。"
                 },
                 4: {
-                    enemies: [{ id: 7, x: 6, y: 4, alive: true, label: '第9使徒' }, { id: 8, x: -8, y: -3, alive: true, label: '第10使徒' }],
-                    allies: [{ id: 102, x: 2, y: 2, label: '士兵A' }, { id: 103, x: -2, y: -2, label: '士兵B' }],
-                    hint: "最終作戰：精密彈道控制。避開友軍方陣。"
+                    enemies: [{ id: 7, x: 4, y: 3, alive: true, label: '第9使徒' }, { id: 8, x: 2, y: 3, alive: true, label: '第10使徒' }],
+                    allies: [{ id: 108, x: 3, y: 0, label: '總部' }, { id: 109, x: 3, y: 1, label: '發射台' }, { id: 110, x: 1, y: 4, label: '巡洋艦' }, { id: 111, x: 5, y: 4, label: '驅逐艦' }],
+                    hint: "目標偏向右側。請平移「二次函數」的頂點，精準穿透防線。",
+                    typeReq: "quadratic",
+                    errorMsg: "ERROR: 武器不符！指揮部要求使用「二次函數」(需包含 ^2)。"
                 }
             };
 
@@ -123,13 +131,13 @@
 
             const animationRef = useRef(null);
 
-            // 初始化關卡
             useEffect(() => {
                 const current = levelData[level];
                 if (current) {
                     setEnemies(current.enemies);
                     setAllies(current.allies);
-                    setMessage(`關卡 ${level}: ${current.hint}`);
+                    setMessage(`關卡 ${level} - ${current.hint}`);
+                    setUserInput(''); // 每關開始清空輸入
                 }
             }, [level]);
 
@@ -153,7 +161,6 @@
                     if (loadedCount >= 3) setIsAssetsLoaded(true);
                 };
                 
-                // 修正：加入 onerror 確保即使圖片失效，遊戲也能正常啟動並使用後備圖形
                 const eImg = new Image(); eImg.src = ENEMY_IMAGE_URL; 
                 eImg.onload = () => { enemyImgRef.current = eImg; checkAllLoaded(); };
                 eImg.onerror = checkAllLoaded;
@@ -202,7 +209,6 @@
                 ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(width, centerY); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height); ctx.stroke();
                 
-                // 繪製敵人
                 currentEnemies.forEach(en => {
                     if (!en.alive) return;
                     const sx = centerX + en.x * gridScale;
@@ -211,7 +217,6 @@
                     if (enemyImgRef.current) {
                         ctx.drawImage(enemyImgRef.current, sx - 18, sy - 18, 36, 36);
                     } else {
-                        // 後備圖形
                         ctx.fillStyle = '#ff4400';
                         ctx.beginPath(); ctx.arc(sx, sy, 15, 0, Math.PI*2); ctx.fill();
                     }
@@ -222,12 +227,10 @@
                     
                     ctx.fillStyle = '#ff4400';
                     ctx.font = '900 10px sans-serif';
-                    // 修正：加入坐標顯示，分行排列更像雷達介面
                     ctx.fillText(`TARGET: ${en.label}`, sx + 30, sy - 2);
                     ctx.fillText(`COORD: (${en.x}, ${en.y})`, sx + 30, sy + 10);
                 });
 
-                // 繪製友軍 (士兵)
                 currentAllies.forEach(al => {
                     const sx = centerX + al.x * gridScale;
                     const sy = centerY - al.y * gridScale;
@@ -235,7 +238,6 @@
                     if (allyImgRef.current) {
                         ctx.drawImage(allyImgRef.current, sx - 16, sy - 16, 32, 32);
                     } else {
-                        // 後備圖形
                         ctx.fillStyle = '#00ffff';
                         ctx.beginPath(); ctx.arc(sx, sy, 12, 0, Math.PI*2); ctx.fill();
                     }
@@ -247,12 +249,10 @@
                     
                     ctx.fillStyle = '#00ffff';
                     ctx.font = '900 10px sans-serif';
-                    // 修正：加入坐標顯示
                     ctx.fillText(`ALLY: ${al.label}`, sx + 25, sy - 2);
                     ctx.fillText(`COORD: (${al.x}, ${al.y})`, sx + 25, sy + 10);
                 });
 
-                // 爆炸動畫
                 currentExplosions.forEach(exp => {
                     const sx = centerX + exp.x * gridScale;
                     const sy = centerY - exp.y * gridScale;
@@ -286,7 +286,23 @@
             }, [explosions]);
 
             const handleFire = () => {
-                if (isFiring) return;
+                if (isFiring || !userInput.trim()) return;
+                
+                // --- 武器要求驗證 ---
+                const currentLevelData = levelData[level];
+                const cleanInput = userInput.replace(/\s/g, '').toLowerCase();
+                const isQuadratic = cleanInput.includes('^2') || cleanInput.includes('x*x') || cleanInput.includes('xx') || cleanInput.includes('x^');
+                
+                if (currentLevelData.typeReq === 'quadratic' && !isQuadratic) {
+                    setMessage(currentLevelData.errorMsg);
+                    return;
+                }
+                if (currentLevelData.typeReq === 'linear' && isQuadratic) {
+                    setMessage(currentLevelData.errorMsg);
+                    return;
+                }
+                // -------------------
+
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
                 let isTerminated = false;
@@ -295,6 +311,10 @@
                     const preparedInput = userInput.replace(/(\d)(x)/g, '$1*$2');
                     const node = math.parse(preparedInput);
                     const code = node.compile();
+                    
+                    // 測試公式是否能正常計算
+                    code.evaluate({ x: 0 }); 
+
                     setIsFiring(true);
                     setMessage('同步率上升。陽電子炮發射！');
 
@@ -307,7 +327,6 @@
 
                         if (currentScreenX > canvasSize.width) {
                             setIsFiring(false);
-                            // 檢查是否過關
                             setEnemies(prev => {
                                 const allDead = prev.every(e => !e.alive);
                                 if (allDead) {
@@ -315,8 +334,10 @@
                                         setMessage(`>> 目標消滅。準備進入 LEVEL ${level + 1}。`);
                                         setTimeout(() => setLevel(l => l + 1), 2000);
                                     } else {
-                                        setMessage('>> 最終目標沈默。任務完全達成！');
+                                        setMessage('>> 最終目標沈默。所有作戰任務完全達成！');
                                     }
+                                } else {
+                                    setMessage('>> 未能完全殲滅目標。請重新計算彈道。');
                                 }
                                 return prev;
                             });
@@ -402,7 +423,6 @@
 
             return (
                 <div className="flex flex-col items-center justify-start min-h-screen p-2 md:p-6 select-none bg-[#050505]">
-                    {/* 頂部狀態欄 */}
                     <div className="w-full max-w-5xl flex justify-between items-end mb-2 border-b-4 border-orange-500 pb-2">
                         <div className="text-4xl md:text-6xl font-black italic tracking-tighter">NERV <span className="text-xl not-italic font-normal tracking-widest ml-4 hidden md:inline">TACTICAL MONITOR</span></div>
                         <div className="text-right flex items-center gap-6">
@@ -417,7 +437,6 @@
                         </div>
                     </div>
 
-                    {/* 主顯示區 */}
                     <div className="relative w-full max-w-5xl flex gap-2">
                         <div className="hidden lg:flex flex-col gap-2 w-12 text-[10px] bg-orange-500/10 p-1 border border-orange-500/30">
                             <div className="vertical-text h-full text-center py-2 text-orange-500/60 font-bold">MONITORING_SYSTEM_ACTIVE</div>
@@ -443,7 +462,6 @@
                         </div>
                     </div>
 
-                    {/* 控制面板 */}
                     <div className="w-full max-w-5xl eva-panel p-4 md:p-8 border-2 border-orange-600/50">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
                             <div className="lg:col-span-8">
@@ -484,7 +502,7 @@
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center border-t border-orange-500/20 pt-4">
                             <div className="md:col-span-3 flex items-center gap-4">
                                 <div className="bg-orange-600 text-black px-2 py-1 text-xs font-black">SYSTEM_MSG</div>
-                                <div className={`font-bold tracking-widest text-sm overflow-hidden whitespace-nowrap ${message.includes('警報') ? 'text-red-500 animate-pulse' : 'text-orange-200'}`}>
+                                <div className={`font-bold tracking-widest text-sm overflow-hidden whitespace-nowrap ${message.includes('ERROR') || message.includes('警報') ? 'text-red-500 animate-pulse' : 'text-orange-200'}`}>
                                     {message}
                                 </div>
                             </div>
