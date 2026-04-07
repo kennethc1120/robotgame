@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math SRW: Operation Graph</title>
+    <title>Math SRW: EVA Tactical Interface (Explosion Update)</title>
     <!-- 引入 Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 React, ReactDOM 與 Babel -->
@@ -13,9 +13,57 @@
     <!-- 引入 Math.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
     <style>
-        body { background-color: black; margin: 0; overflow-x: hidden; }
-        canvas { image-rendering: crisp-edges; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&display=swap');
+
+        body { background-color: #050505; margin: 0; overflow-x: hidden; font-family: 'Noto Sans TC', sans-serif; color: #fb923c; }
+        canvas { image-rendering: auto; cursor: crosshair; }
         ::-webkit-scrollbar { display: none; }
+        
+        .eva-panel {
+            background: linear-gradient(180deg, rgba(251, 146, 60, 0.1) 0%, rgba(0, 0, 0, 0.9) 100%);
+            border-top: 2px solid #fb923c;
+        }
+
+        .eva-input {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #fb923c;
+            color: #fb923c;
+            text-shadow: 0 0 10px #fb923c;
+        }
+
+        .eva-button {
+            background-color: #fb923c;
+            color: #000;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+            transition: all 0.2s;
+            font-weight: 900;
+        }
+
+        .eva-button:hover {
+            background-color: #fff;
+            box-shadow: 0 0 20px #fb923c;
+        }
+
+        .emergency-blink {
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -24,74 +72,83 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 資源配置區 ---
-        // 背景圖網址 (建議使用深色星空或科技感背景)
-        const BG_IMAGE_URL = './img/background.png';
-        // 小兵圖片網址
+        const BG_IMAGE_URL = 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1200&q=80';
         const ENEMY_IMAGE_URL = './img/enemy.png'; 
 
         const App = () => {
             const canvasRef = useRef(null);
+            const containerRef = useRef(null);
             const enemyImgRef = useRef(null);
             const bgImgRef = useRef(null);
+            
             const [userInput, setUserInput] = useState('0.5x + 1');
-            const [message, setMessage] = useState('系統連線中...');
+            const [message, setMessage] = useState('MAGI 系統已連線。等待指令。');
             const [isAssetsLoaded, setIsAssetsLoaded] = useState(false);
-            const [enemies, setEnemies] = useState([
-                { id: 1, x: 4, y: 3, alive: true, label: '小兵A' },
-                { id: 2, x: -5, y: 2, alive: true, label: '小兵B' },
-                { id: 3, x: 2, y: -4, alive: true, label: '精英機' },
-                { id: 4, x: -3, y: -2, alive: true, label: '偵察機' }
-            ]);
             const [isFiring, setIsFiring] = useState(false);
+            const [internalPower, setInternalPower] = useState(100);
+            
+            const [canvasSize, setCanvasSize] = useState({ width: 800, height: 450 });
+            const gridScale = 40; 
 
-            const gridScale = 35; 
+            // 敵人狀態與爆炸動畫隊列
+            const [enemies, setEnemies] = useState([
+                { id: 1, x: 5, y: 4, alive: true, label: '使徒-A' },
+                { id: 2, x: -6, y: 3, alive: true, label: '使徒-B' },
+                { id: 3, x: 3, y: -5, alive: true, label: '使徒-C' },
+                { id: 4, x: -4, y: -2, alive: true, label: '使徒-D' }
+            ]);
+            const [explosions, setExplosions] = useState([]);
+
             const animationRef = useRef(null);
 
-            // 預載入所有圖片資源
             useEffect(() => {
-                let loadedCount = 0;
-                const totalAssets = 2;
-
-                const checkAllLoaded = () => {
-                    loadedCount++;
-                    if (loadedCount >= totalAssets) {
-                        setIsAssetsLoaded(true);
-                        setMessage('戰術地圖加載完成，請輸入攻擊函數。');
+                const handleResize = () => {
+                    if (containerRef.current) {
+                        const { clientWidth, clientHeight } = containerRef.current;
+                        setCanvasSize({ width: clientWidth, height: clientHeight });
                     }
                 };
-
-                // 加載小兵
-                const eImg = new Image();
-                eImg.src = ENEMY_IMAGE_URL;
-                eImg.onload = () => { enemyImgRef.current = eImg; checkAllLoaded(); };
-                eImg.onerror = () => checkAllLoaded();
-
-                // 加載背景
-                const bImg = new Image();
-                bImg.src = BG_IMAGE_URL;
-                bImg.onload = () => { bgImgRef.current = bImg; checkAllLoaded(); };
-                bImg.onerror = () => checkAllLoaded();
+                const resizeObserver = new ResizeObserver(handleResize);
+                if (containerRef.current) resizeObserver.observe(containerRef.current);
+                handleResize();
+                return () => resizeObserver.disconnect();
             }, []);
 
-            const drawBase = (ctx, currentEnemies) => {
-                const { width, height } = ctx.canvas;
+            useEffect(() => {
+                let loadedCount = 0;
+                const checkAllLoaded = () => {
+                    loadedCount++;
+                    if (loadedCount >= 2) setIsAssetsLoaded(true);
+                };
+                const eImg = new Image(); eImg.src = ENEMY_IMAGE_URL; eImg.onload = () => { enemyImgRef.current = eImg; checkAllLoaded(); };
+                const bImg = new Image(); bImg.src = BG_IMAGE_URL; bImg.onload = () => { bgImgRef.current = bImg; checkAllLoaded(); };
+                
+                const timer = setInterval(() => {
+                    setInternalPower(prev => prev > 0 ? prev - 0.1 : 0);
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // 繪製基礎圖層與動畫
+            const drawFrame = (ctx, currentEnemies, currentExplosions, width, height) => {
                 const centerX = width / 2;
                 const centerY = height / 2;
 
-                // 1. 繪製背景圖
+                ctx.clearRect(0, 0, width, height);
+
+                // 1. 背景
                 if (bgImgRef.current) {
-                    ctx.save();
-                    ctx.globalAlpha = 0.4; // 背景透明度，讓網格更明顯
-                    ctx.drawImage(bgImgRef.current, 0, 0, width, height);
-                    ctx.restore();
-                } else {
-                    ctx.fillStyle = '#050a05';
+                    const img = bgImgRef.current;
+                    const scale = Math.max(width / img.width, height / img.height);
+                    const x = (width / 2) - (img.width / 2) * scale;
+                    const y = (height / 2) - (img.height / 2) * scale;
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                     ctx.fillRect(0, 0, width, height);
                 }
 
-                // 2. 網格與座標軸 (在背景之上)
-                ctx.strokeStyle = '#1a331a';
+                // 2. 網格
+                ctx.strokeStyle = 'rgba(251, 146, 60, 0.15)';
                 ctx.lineWidth = 1;
                 for (let x = centerX % gridScale; x < width; x += gridScale) {
                     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
@@ -100,80 +157,98 @@
                     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
                 }
 
-                ctx.strokeStyle = '#33ff33';
+                // 3. 軸線
+                ctx.strokeStyle = '#fb923c';
                 ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(width, centerY); ctx.stroke();
                 ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height); ctx.stroke();
-
-                // 3. 繪製敵人
+                
+                // 4. 敵人
                 currentEnemies.forEach(en => {
                     if (!en.alive) return;
                     const sx = centerX + en.x * gridScale;
                     const sy = centerY - en.y * gridScale;
+                    if (enemyImgRef.current) ctx.drawImage(enemyImgRef.current, sx - 18, sy - 18, 36, 36);
+                    ctx.strokeStyle = '#ff4400';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(sx, sy, 25, 0, Math.PI*2); ctx.stroke();
+                    ctx.fillStyle = '#ff4400';
+                    ctx.font = '900 10px sans-serif';
+                    ctx.fillText(`TARGET: ${en.label}`, sx + 30, sy + 5);
+                });
 
-                    if (enemyImgRef.current) {
-                        ctx.drawImage(enemyImgRef.current, sx - 15, sy - 15, 30, 30);
-                    } else {
-                        ctx.fillStyle = '#ff3333';
-                        ctx.beginPath();
-                        ctx.moveTo(sx, sy - 15);
-                        ctx.lineTo(sx + 15, sy + 10);
-                        ctx.lineTo(sx - 15, sy + 10);
-                        ctx.closePath();
-                        ctx.fill();
-                    }
-
-                    // 目標鎖定框
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(sx - 18, sy - 18, 36, 36);
-
-                    // 標籤
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 12px Courier New';
-                    ctx.fillText(`${en.label} (${en.x}, ${en.y})`, sx + 20, sy + 5);
+                // 5. 爆炸動畫
+                currentExplosions.forEach(exp => {
+                    const sx = centerX + exp.x * gridScale;
+                    const sy = centerY - exp.y * gridScale;
+                    const radius = exp.frame * 2.5;
+                    const alpha = 1 - (exp.frame / 20);
+                    
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 80, 0, ${alpha})`;
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, radius * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 200, 0, ${alpha})`;
+                    ctx.fill();
+                    ctx.restore();
                 });
             };
 
             useEffect(() => {
-                if (isAssetsLoaded) {
+                if (isAssetsLoaded && canvasRef.current) {
                     const ctx = canvasRef.current.getContext('2d');
-                    drawBase(ctx, enemies);
+                    drawFrame(ctx, enemies, explosions, canvasSize.width, canvasSize.height);
                 }
-            }, [enemies, isAssetsLoaded]);
+            }, [enemies, explosions, isAssetsLoaded, canvasSize]);
+
+            // 更新爆炸動畫幀
+            useEffect(() => {
+                if (explosions.length > 0) {
+                    const timer = requestAnimationFrame(() => {
+                        setExplosions(prev => prev
+                            .map(exp => ({ ...exp, frame: exp.frame + 1 }))
+                            .filter(exp => exp.frame < 20)
+                        );
+                    });
+                    return () => cancelAnimationFrame(timer);
+                }
+            }, [explosions]);
 
             const handleFire = () => {
                 if (isFiring) return;
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
-                
                 try {
                     const preparedInput = userInput.replace(/(\d)(x)/g, '$1*$2');
                     const node = math.parse(preparedInput);
                     const code = node.compile();
-
                     setIsFiring(true);
-                    setMessage('武裝解除鎖定... 激光發射！');
+                    setMessage('同步率上升。陽電子炮發射！');
 
-                    let currentX = 0;
-                    const centerX = canvas.width / 2;
-                    const centerY = canvas.height / 2;
+                    let currentScreenX = 0;
+                    const centerX = canvasSize.width / 2;
+                    const centerY = canvasSize.height / 2;
 
                     const animate = () => {
-                        if (currentX > canvas.width) {
+                        if (currentScreenX > canvasSize.width) {
                             setIsFiring(false);
-                            checkEndGame();
+                            const allDead = enemies.every(e => !e.alive);
+                            if (allDead) setMessage('>> 使徒完全沈默。任務達成。');
                             return;
                         }
-
-                        ctx.strokeStyle = '#33ffff';
-                        ctx.lineWidth = 4;
-                        ctx.shadowBlur = 15;
-                        ctx.shadowColor = '#00ffff';
                         
-                        ctx.beginPath();
-                        const startX = currentX;
-                        const endX = currentX + 8;
+                        ctx.strokeStyle = '#fb923c';
+                        ctx.lineWidth = 6;
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#ff3300';
+                        
+                        const step = 25;
+                        const startX = currentScreenX;
+                        const endX = currentScreenX + step;
                         
                         const calcY = (screenX) => {
                             const mathX = (screenX - centerX) / gridScale;
@@ -185,124 +260,143 @@
                         const y2 = calcY(endX);
 
                         if (!isNaN(y1) && !isNaN(y2)) {
+                            ctx.beginPath();
                             ctx.moveTo(startX, y1);
                             ctx.lineTo(endX, y2);
                             ctx.stroke();
                         }
                         ctx.shadowBlur = 0;
-
+                        
                         const mathXCurrent = (endX - centerX) / gridScale;
+                        
                         setEnemies(prev => prev.map(en => {
                             if (!en.alive) return en;
-                            const targetY = code.evaluate({ x: en.x });
-                            if (Math.abs(mathXCurrent - en.x) < 0.15 && Math.abs(targetY - en.y) < 0.4) {
-                                drawExplosion(ctx, centerX + en.x * gridScale, centerY - en.y * gridScale);
-                                setMessage(`Target Confirmed! ${en.label} 擊破！`);
-                                return { ...en, alive: false };
-                            }
+                            try {
+                                const targetY = code.evaluate({ x: en.x });
+                                if (Math.abs(mathXCurrent - en.x) < 0.35 && Math.abs(targetY - en.y) < 0.6) {
+                                    // 觸發爆炸
+                                    setExplosions(exps => [...exps, { x: en.x, y: en.y, frame: 0 }]);
+                                    return { ...en, alive: false };
+                                }
+                            } catch(e) {}
                             return en;
                         }));
 
-                        currentX += 8;
+                        currentScreenX += step;
                         animationRef.current = requestAnimationFrame(animate);
                     };
                     animate();
                 } catch (err) {
-                    setMessage('警告：函數解析失敗！請確認語法。');
+                    setMessage('ERROR: 無法解析路徑公式。');
                     setIsFiring(false);
                 }
             };
 
-            const drawExplosion = (ctx, x, y) => {
-                ctx.fillStyle = '#ffff00';
-                ctx.beginPath(); ctx.arc(x, y, 35, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#ff6600';
-                ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
-            };
-
-            const checkEndGame = () => {
-                setEnemies(prev => {
-                    if (prev.length > 0 && prev.every(e => !e.alive)) {
-                        setMessage('MISSION COMPLETE! 敵機全數殲滅！');
-                    }
-                    return prev;
-                });
-            };
-
             const resetGame = () => {
                 setEnemies([
-                    { id: 1, x: 4, y: 3, alive: true, label: '小兵A' },
-                    { id: 2, x: -5, y: 2, alive: true, label: '小兵B' },
-                    { id: 3, x: 2, y: -4, alive: true, label: '精英機' },
-                    { id: 4, x: -3, y: -2, alive: true, label: '偵察機' }
+                    { id: 1, x: 5, y: 4, alive: true, label: '使徒-A' },
+                    { id: 2, x: -6, y: 3, alive: true, label: '使徒-B' },
+                    { id: 3, x: 3, y: -5, alive: true, label: '使徒-C' },
+                    { id: 4, x: -4, y: -2, alive: true, label: '使徒-D' }
                 ]);
-                setMessage('等待指令中... 敵機座標已重置。');
+                setExplosions([]);
+                setInternalPower(100);
+                setMessage('系統重啟。S2機關同步中。');
                 if (animationRef.current) cancelAnimationFrame(animationRef.current);
                 setIsFiring(false);
             };
 
             return (
-                <div className="flex flex-col items-center justify-center min-h-screen bg-black text-green-400 p-4 font-mono">
-                    <div className="mb-4 text-2xl md:text-3xl font-bold tracking-widest border-b-2 border-green-400 pb-2 text-center uppercase">
-                        Math SRW: Operation Graph
-                    </div>
-
-                    <div className="relative group w-full max-w-4xl">
-                        <canvas
-                            ref={canvasRef}
-                            width={800}
-                            height={500}
-                            className="border-4 border-green-900 rounded-lg shadow-[0_0_30px_rgba(34,197,94,0.2)] w-full h-auto"
-                        />
-                        <div className="absolute top-4 right-4 bg-black/80 p-2 border border-green-500 text-[10px] md:text-xs">
-                            雷達系統運作中 | 1 單位 = 35px
+                <div className="flex flex-col items-center justify-start min-h-screen p-2 md:p-6 select-none bg-[#050505]">
+                    {/* 頂部狀態欄 */}
+                    <div className="w-full max-w-5xl flex justify-between items-end mb-2 border-b-4 border-orange-500 pb-2">
+                        <div className="text-4xl md:text-6xl font-black italic tracking-tighter">NERV <span className="text-xl not-italic font-normal tracking-widest ml-4 hidden md:inline">TACTICAL MONITOR</span></div>
+                        <div className="text-right">
+                            <div className="text-xs uppercase font-bold">Internal Power</div>
+                            <div className="text-2xl font-black">{internalPower.toFixed(1)}%</div>
                         </div>
                     </div>
 
-                    <div className="mt-6 w-full max-w-4xl bg-zinc-900 p-4 md:p-6 border-t-4 border-blue-600 rounded-b-xl shadow-2xl">
-                        <div className="flex flex-col lg:flex-row gap-6 items-center">
-                            <div className="flex-1 w-full">
-                                <label className="block text-blue-400 mb-2 text-sm uppercase tracking-wider">主武裝輸出：f(x)=</label>
-                                <input
-                                    type="text"
-                                    value={userInput}
-                                    onChange={(e) => setUserInput(e.target.value)}
-                                    disabled={isFiring}
-                                    className="w-full bg-black border-2 border-blue-900 p-4 text-2xl focus:border-blue-400 outline-none transition-all text-cyan-400 font-bold"
-                                    placeholder="例如: x^2, sin(x), 2x+1"
-                                />
-                            </div>
+                    {/* 主顯示區 */}
+                    <div className="relative w-full max-w-5xl flex gap-2">
+                        <div className="hidden lg:flex flex-col gap-2 w-12 text-[10px] bg-orange-500/10 p-1 border border-orange-500/30">
+                            <div className="vertical-text h-full text-center py-2 text-orange-500/60 font-bold">MONITORING_SYSTEM_ACTIVE</div>
+                            <div className="bg-orange-500 text-black font-black p-1 text-center">01</div>
+                        </div>
+
+                        <div ref={containerRef} className="canvas-container border-4 border-orange-500 overflow-hidden bg-black flex-1">
+                            <canvas 
+                                ref={canvasRef} 
+                                width={canvasSize.width} 
+                                height={canvasSize.height} 
+                                className="w-full h-full block"
+                            />
                             
-                            <div className="flex gap-3 w-full lg:w-auto">
+                            {isFiring && (
+                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center border-[20px] border-red-600/30 emergency-blink">
+                                    <div className="bg-red-600 text-white px-8 py-2 font-black text-4xl rotate-[-5deg] shadow-2xl">EMERGENCY</div>
+                                </div>
+                            )}
+
+                            <div className="absolute top-2 left-2 text-[10px] text-orange-400 font-bold">SYNC_RATE: 41.3%</div>
+                            <div className="absolute top-2 right-2 text-[10px] text-orange-400 font-bold">PRIORITY: AAA</div>
+                        </div>
+                    </div>
+
+                    {/* 控制面板 */}
+                    <div className="w-full max-w-5xl eva-panel p-4 md:p-8 border-2 border-orange-600/50">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+                            <div className="lg:col-span-8">
+                                <div className="flex justify-between mb-1">
+                                    <span className="text-xs font-black tracking-widest text-orange-500 uppercase">Weaponry Path Analysis</span>
+                                    <span className="text-xs text-orange-800 font-bold">SCALE: 1 UNIT = {gridScale} PX</span>
+                                </div>
+                                <div className="relative flex items-center">
+                                    <span className="absolute left-4 text-2xl font-black italic text-orange-600">f(x)=</span>
+                                    <input
+                                        type="text"
+                                        value={userInput}
+                                        onChange={(e) => setUserInput(e.target.value)}
+                                        disabled={isFiring}
+                                        className="eva-input w-full pl-20 pr-4 py-4 text-3xl font-black italic focus:outline-none"
+                                        placeholder="INPUT FORMULA"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-4 flex gap-4">
                                 <button
                                     onClick={handleFire}
                                     disabled={isFiring}
-                                    className={`flex-1 lg:flex-none px-10 py-4 font-black text-2xl uppercase skew-x-[-15deg] transition-all ${
-                                        isFiring ? 'bg-zinc-800 text-zinc-600' : 'bg-red-700 hover:bg-red-600 text-white shadow-[6px_6px_0px_#450a0a]'
-                                    }`}
+                                    className={`eva-button flex-1 py-5 text-2xl tracking-[0.2em] ${isFiring ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                                 >
-                                    {isFiring ? 'Firing' : 'Attack!'}
+                                    {isFiring ? 'BUSY' : '發射'}
                                 </button>
                                 <button
                                     onClick={resetGame}
-                                    className="px-6 py-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 font-bold uppercase"
+                                    className="px-6 py-5 bg-black border border-orange-950 text-orange-900 font-bold text-xs hover:text-orange-500 transition-colors"
                                 >
-                                    Reset
+                                    RESET
                                 </button>
                             </div>
                         </div>
 
-                        <div className="mt-5 p-4 bg-black border-l-4 border-yellow-500 text-sm md:text-base italic min-h-[3.5rem] flex items-center">
-                            <span className="text-yellow-600 mr-3 font-bold not-italic">[SYSTEM LOG]:</span>
-                            {message}
+                        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-center border-t border-orange-500/20 pt-4">
+                            <div className="md:col-span-3 flex items-center gap-4">
+                                <div className="bg-orange-600 text-black px-2 py-1 text-xs font-black">SYSTEM_MSG</div>
+                                <div className="text-orange-200 font-bold tracking-widest text-sm overflow-hidden whitespace-nowrap">
+                                    {message}
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 text-[9px] text-orange-900 font-black uppercase">
+                                <span>MAGI_CASPER_SYNC</span>
+                            </div>
                         </div>
+                    </div>
 
-                        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-[10px] md:text-xs">
-                            <div className="bg-zinc-800/50 p-2 border border-zinc-700 rounded text-center">二次方: x^2</div>
-                            <div className="bg-zinc-800/50 p-2 border border-zinc-700 rounded text-center">絕對值: abs(x)</div>
-                            <div className="bg-zinc-800/50 p-2 border border-zinc-700 rounded text-center">三角函數: sin(x)</div>
-                            <div className="bg-zinc-800/50 p-2 border border-zinc-700 rounded text-center">開方: sqrt(x)</div>
-                        </div>
+                    <div className="mt-4 w-full max-w-5xl text-[8px] md:text-[10px] text-orange-900 flex justify-between px-2 uppercase font-bold">
+                        <div>Top Secret // Confidential</div>
+                        <div>(c) 2026 NERV Tech Labs</div>
                     </div>
                 </div>
             );
