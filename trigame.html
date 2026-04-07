@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trig-Beat: 誘導公式 100 秒挑戰</title>
+    <style>
+        body { 
+            margin: 0; padding: 0; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; 
+            /* 1. 加入節奏遊戲風格背景圖片 */
+            background-image: url(./img/trigame_bg.png);
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* 增加半透明遮罩，讓背景變暗，確保文字清晰 */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.75); /* 深藍黑色半透明 */
+            z-index: -1;
+        }
+
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; z-index: 1; }
+        
+        /* 頂部資訊區 */
+        #header { display: flex; justify-content: space-between; padding: 15px 30px; background-color: rgba(22, 33, 62, 0.8); font-size: 24px; font-weight: bold; z-index: 10; border-bottom: 2px solid #e94560; backdrop-filter: blur(5px); }
+        #timer { color: #e94560; text-shadow: 0 0 10px #e94560; }
+        #combo { color: #f9a826; text-shadow: 0 0 10px #f9a826; }
+        
+        /* 遊戲區域 (題目掉落區) */
+        #play-area { flex-grow: 1; position: relative; overflow: hidden; }
+        
+        /* 增加節奏軌道線的視覺效果 */
+        #play-area::after {
+            content: "";
+            position: absolute;
+            bottom: 20px; left: 0; width: 100%; height: 2px;
+            background-color: rgba(67, 235, 218, 0.5);
+            box-shadow: 0 0 10px #43ebda;
+            z-index: 0;
+        }
+
+        .falling-question { position: absolute; left: 50%; transform: translateX(-50%); background-color: rgba(15, 52, 96, 0.9); border: 2px solid #43ebda; border-radius: 10px; padding: 15px 30px; font-size: 32px; font-weight: bold; box-shadow: 0 0 15px #43ebda; text-align: center; white-space: nowrap; z-index: 5; }
+        .danger { border-color: #e94560; box-shadow: 0 0 20px #e94560; background-color: rgba(90, 15, 30, 0.9); }
+
+        /* 底部操作區 */
+        #controls { height: 200px; background-color: rgba(22, 33, 62, 0.9); display: flex; padding: 10px; gap: 10px; z-index: 10; backdrop-filter: blur(10px); border-top: 2px solid #43ebda; }
+        .control-group { flex: 1; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-content: center; }
+        .btn { flex: 1 1 40%; height: 60px; font-size: 24px; font-weight: bold; border: 2px solid #2a2a4a; border-radius: 8px; cursor: pointer; transition: 0.1s; background-color: rgba(42, 42, 74, 0.8); color: white; text-shadow: 1px 1px 2px black; }
+        .btn:active { transform: scale(0.95); }
+        .btn.selected { background-color: #e94560; color: white; border-color: #ff5c77; box-shadow: 0 0 15px #e94560; }
+        
+        /* 畫面閃爍特效 */
+        #flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.1s; z-index: 20; }
+        .flash-red { background-color: rgba(233, 69, 96, 0.4); opacity: 1 !important; }
+        .flash-green { background-color: rgba(67, 235, 218, 0.3); opacity: 1 !important; }
+
+        /* 開始與結束畫面 */
+        #overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 30; }
+        h1 { font-size: 56px; color: #43ebda; margin-bottom: 10px; text-align: center; text-shadow: 0 0 20px #43ebda; letter-spacing: 2px; }
+        p { font-size: 20px; margin-bottom: 30px; text-align: center; line-height: 1.6; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; }
+        .start-btn { padding: 15px 50px; font-size: 28px; font-weight: bold; background: linear-gradient(45deg, #e94560, #ff5c77); color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(233, 69, 96, 0.5); transition: transform 0.2s; }
+        .start-btn:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+<audio id="bg-music" loop src="Winning_Sequence.mp3"></audio>
+
+<div id="game-container">
+    <div id="header">
+        <div id="score-display">分數: 0</div>
+        <div id="combo-display" style="opacity: 0;">Combo: 0</div>
+        <div id="timer">100 s</div>
+    </div>
+
+    <div id="play-area">
+        <div id="question-box" class="falling-question" style="top: -100px;">sin(180° + x)</div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group" style="flex: 0.5;">
+            <button class="btn sign-btn" data-val="+">＋</button>
+            <button class="btn sign-btn" data-val="-">－</button>
+        </div>
+        <div class="control-group" style="flex: 1.5;">
+            <button class="btn func-btn" data-val="sin">sin x</button>
+            <button class="btn func-btn" data-val="cos">cos x</button>
+            <button class="btn func-btn" data-val="tan">tan x</button>
+            <button class="btn func-btn" data-val="cot">1/tan x</button>
+        </div>
+    </div>
+    
+    <div id="flash-overlay"></div>
+</div>
+
+<div id="overlay-screen">
+    <h1 id="screen-title">TRIG-BEAT<br>化簡公式</h1>
+    <p id="screen-desc">點擊下方按鈕，伴隨音樂展開 100 秒狂熱挑戰！<br><br>👉 <b>規則：</b>先選正負號，再選函數。<br>👉 <b>提示：</b>紅色框框代表 90度 +- 或 270度 +- 需要變名！<br>掉落到底部或答錯將扣 50 分！</p>
+    <button class="start-btn" onclick="startGame()">開始挑戰</button>
+</div>
+
+<script>
+    // 遊戲狀態變數
+    let score = 0;
+    let combo = 0;
+    let timeLeft = 100;
+    let gameInterval;
+    let fallInterval;
+    let isPlaying = false;
+    
+    // 題目變數
+    let currentAnsSign = '';
+    let currentAnsFunc = '';
+    let questionY = -100;
+    let fallSpeed = 2;
+
+    // 玩家輸入變數
+    let selectedSign = null;
+    let selectedFunc = null;
+
+    const funcs = ['sin', 'cos', 'tan'];
+    const angles = [90, 180, 270, 360];
+    const operators = ['+', '-'];
+
+    // DOM 元素與音樂
+    const scoreEl = document.getElementById('score-display');
+    const comboEl = document.getElementById('combo-display');
+    const timerEl = document.getElementById('timer');
+    const questionBox = document.getElementById('question-box');
+    const flashOverlay = document.getElementById('flash-overlay');
+    const overlayScreen = document.getElementById('overlay-screen');
+    const bgMusic = document.getElementById('bg-music');
+
+    bgMusic.volume = 0.5; // 設定音量為 50% 免得太刺耳
+
+    // 判斷 ASTC 與變名邏輯
+    function generateQuestion() {
+        const baseFunc = funcs[Math.floor(Math.random() * funcs.length)];
+        const angleBase = angles[Math.floor(Math.random() * angles.length)];
+        const operator = operators[Math.floor(Math.random() * operators.length)];
+
+        questionBox.innerText = `${baseFunc}(${angleBase}° ${operator} x)`;
+        
+        if(angleBase === 90 || angleBase === 270) {
+            questionBox.classList.add('danger');
+        } else {
+            questionBox.classList.remove('danger');
+        }
+
+        let testAngle = operator === '+' ? angleBase + 30 : angleBase - 30;
+        testAngle = (testAngle + 360) % 360;
+
+        let isPositive = false;
+        if (testAngle > 0 && testAngle < 90) isPositive = true;
+        else if (testAngle > 90 && testAngle < 180) isPositive = (baseFunc === 'sin');
+        else if (testAngle > 180 && testAngle < 270) isPositive = (baseFunc === 'tan');
+        else if (testAngle > 270 && testAngle < 360) isPositive = (baseFunc === 'cos');
+
+        currentAnsSign = isPositive ? '+' : '-';
+        
+        currentAnsFunc = baseFunc;
+        if (angleBase === 90 || angleBase === 270) {
+            if (baseFunc === 'sin') currentAnsFunc = 'cos';
+            else if (baseFunc === 'cos') currentAnsFunc = 'sin';
+            else if (baseFunc === 'tan') currentAnsFunc = 'cot';
+        }
+
+        questionY = -100;
+        fallSpeed = 2.5 + (combo * 0.15); // 增加掉落速度讓節奏感更強
+        if(fallSpeed > 10) fallSpeed = 10;
+        
+        resetSelection();
+    }
+
+    document.querySelectorAll('.sign-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if(!isPlaying) return;
+            document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedSign = e.target.getAttribute('data-val');
+            checkAnswer();
+        });
+    });
+
+    document.querySelectorAll('.func-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if(!isPlaying) return;
+            document.querySelectorAll('.func-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedFunc = e.target.getAttribute('data-val');
+            checkAnswer();
+        });
+    });
+
+    function resetSelection() {
+        selectedSign = null;
+        selectedFunc = null;
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+    }
+
+    function checkAnswer() {
+        if (selectedSign && selectedFunc) {
+            if (selectedSign === currentAnsSign && selectedFunc === currentAnsFunc) {
+                combo++;
+                let points = 100;
+                if (combo >= 5) points = 120;
+                if (combo >= 10) points = 150;
+                score += points;
+                
+                comboEl.style.opacity = 1;
+                comboEl.innerText = `Combo: ${combo} 🔥`;
+                updateScore();
+                triggerFlash('flash-green');
+                generateQuestion();
+            } else {
+                handleWrongAnswer();
+            }
+        }
+    }
+
+    function handleWrongAnswer() {
+        combo = 0;
+        score -= 50;
+        comboEl.style.opacity = 0;
+        updateScore();
+        triggerFlash('flash-red');
+        generateQuestion();
+    }
+
+    function updateScore() {
+        scoreEl.innerText = `分數: ${score}`;
+    }
+
+    function triggerFlash(className) {
+        flashOverlay.className = '';
+        flashOverlay.classList.add(className);
+        setTimeout(() => {
+            flashOverlay.className = '';
+        }, 150);
+    }
+
+    function updateGameLoop() {
+        if (!isPlaying) return;
+        questionY += fallSpeed;
+        questionBox.style.top = questionY + 'px';
+
+        const playAreaHeight = document.getElementById('play-area').offsetHeight;
+        const boxHeight = questionBox.offsetHeight;
+
+        // 當題目的「底部 (questionY + boxHeight)」超過「判定線 (playAreaHeight - 20)」時才算漏接
+        if ((questionY + boxHeight) > (playAreaHeight - 20)) {
+            handleWrongAnswer();
+        }
+    }
+
+    function startGame() {
+        overlayScreen.style.display = 'none';
+        score = 0;
+        combo = 0;
+        timeLeft = 100;
+        isPlaying = true;
+        updateScore();
+        comboEl.style.opacity = 0;
+        
+        // 播放背景音樂
+        bgMusic.currentTime = 0;
+        bgMusic.play().catch(e => console.log("瀏覽器自動播放限制，請確保用戶點擊後播放"));
+
+        generateQuestion();
+
+        gameInterval = setInterval(() => {
+            timeLeft--;
+            timerEl.innerText = `${timeLeft} s`;
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }, 1000);
+
+        fallInterval = setInterval(updateGameLoop, 16);
+    }
+
+    function endGame() {
+        isPlaying = false;
+        clearInterval(gameInterval);
+        clearInterval(fallInterval);
+        
+        // 停止背景音樂
+        bgMusic.pause();
+        
+        document.getElementById('screen-title').innerText = "時間到！";
+        document.getElementById('screen-desc').innerHTML = `你的最終分數：<strong style="color:#f9a826; font-size:48px; display:block; margin: 10px 0;">${score}</strong>大腦已經刻上了誘導公式！`;
+        document.querySelector('.start-btn').innerText = "再來一局";
+        overlayScreen.style.display = 'flex';
+    }
+</script>
+
+</body>
+</html>
