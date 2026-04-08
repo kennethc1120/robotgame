@@ -104,7 +104,7 @@
     
     <div id="screen-desc" class="desc-box">
         👉 先選正負號，再選函數。<br>
-        👉 紅色框代表 $90^\circ$ 或 $270^\circ$ 需變名！<br>
+        👉 記住「奇變偶不變，符號看象限」！<br>
         掉落到底部或答錯將扣 50 分！
     </div>
 
@@ -236,11 +236,11 @@
 
         questionBox.innerText = `${baseFunc}(${angleBase}° ${operator} x)`;
         
-        if(angleBase === 90 || angleBase === 270) {
-            questionBox.classList.add('danger');
-        } else {
+      //  if(angleBase === 90 || angleBase === 270) {
+        //    questionBox.classList.add('danger');
+        //} else {
             questionBox.classList.remove('danger');
-        }
+       // }
 
         let testAngle = operator === '+' ? angleBase + 30 : angleBase - 30;
         testAngle = (testAngle + 360) % 360;
