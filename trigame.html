@@ -377,25 +377,24 @@
         fallInterval = setInterval(updateGameLoop, 16);
     }
 
-    function endGame() {
+function endGame() {
         isPlaying = false;
         clearInterval(gameInterval);
         clearInterval(fallInterval);
         bgMusic.pause();
         
-        // --- 結算並儲存成績 ---
-        saveScoreToLeaderboard(currentPlayerName, score);
-        updateLeaderboardUI(); // 刷新畫面上榜單
-        
-        // 更新結束畫面文字
+        // 1. 先把結束畫面的文字準備好
         document.getElementById('screen-title').innerText = "時間到！";
         document.getElementById('screen-desc').innerHTML = `玩家 <b>${currentPlayerName}</b> 的最終分數：<br><strong style="color:#f9a826; font-size:48px; display:block; margin: 10px 0;">${score}</strong>`;
         
-        // 隱藏姓名輸入框，避免結束畫面太擁擠 (下次重整網頁可重設)
+        // 隱藏姓名輸入框，避免結束畫面太擁擠
         playerNameInput.style.display = 'none'; 
         
-        document.getElementById('action-btn').innerText = "再來一局";
+        // 2. 顯示結束畫面與排行榜（解決定格問題）
         overlayScreen.style.display = 'flex';
+
+        // 3. 最後才觸發雲端上傳成績（裡面的程式會自動處理上傳與刷新榜單）
+        saveScoreToLeaderboard(currentPlayerName, score);
     }
 </script>
 
