@@ -26,7 +26,7 @@
         #combo { color: #f9a826; text-shadow: 0 0 10px #f9a826; }
         
         #play-area { flex-grow: 1; position: relative; overflow: hidden; }
-        
+        <div id="final-rush-text">FINAL RUSH!!</div>
         #play-area::after {
             content: ""; position: absolute; bottom: 20px; left: 0; width: 100%; height: 2px;
             background-color: rgba(67, 235, 218, 0.5); box-shadow: 0 0 10px #43ebda; z-index: 0;
@@ -106,7 +106,37 @@
     animation: fever-glow 0.5s infinite;
     border: 4px solid #ff5c77 !important;
 }
-       
+/* Final Rush 螢幕閃爍 */
+@keyframes final-rush-blink {
+    0% { background-color: rgba(233, 69, 96, 0); }
+    50% { background-color: rgba(233, 69, 96, 0.15); }
+    100% { background-color: rgba(233, 69, 96, 0); }
+}
+
+.final-rush-active {
+    animation: final-rush-blink 1s infinite;
+}
+
+#final-rush-text {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 80px;
+    font-weight: bold;
+    color: #ff5c77;
+    text-shadow: 0 0 20px #ff5c77;
+    z-index: 100;
+    pointer-events: none;
+    display: none;
+    opacity: 0;
+}
+
+@keyframes rush-appear {
+    0% { transform: translate(-50%, -50%) scale(5); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}       
     </style>
 </head>
 <body>
@@ -270,19 +300,30 @@
 
 
     // --- 遊戲邏輯 ---
-    function generateQuestion() {
+function generateQuestion() {
         const baseFunc = funcs[Math.floor(Math.random() * funcs.length)];
-        const angleBase = angles[Math.floor(Math.random() * angles.length)];
         const operator = operators[Math.floor(Math.random() * operators.length)];
+        
+        // --- 角度多樣化邏輯 ---
+        let availableAngles;
+        if (timeLeft > 70) {
+            // 前 30 秒：只出現 180, 360 (偶不變)
+            availableAngles = [180, 360];
+        } else if (timeLeft > 30) {
+            // 中間 40 秒：混合出現
+            availableAngles = [90, 180, 270, 360];
+        } else {
+            // 最後 30 秒：提高 90, 270 (奇變) 的出現機率
+            availableAngles = [90, 90, 270, 270, 180, 360]; 
+        }
 
+        const angleBase = availableAngles[Math.floor(Math.random() * availableAngles.length)];
         questionBox.innerText = `${baseFunc}(${angleBase}° ${operator} x)`;
         
-      //  if(angleBase === 90 || angleBase === 270) {
-        //    questionBox.classList.add('danger');
-        //} else {
-            questionBox.classList.remove('danger');
-       // }
+        // 移除舊的 danger 邏輯，改為純內部判斷
+        questionBox.classList.remove('danger');
 
+        // 答案邏輯不變
         let testAngle = operator === '+' ? angleBase + 30 : angleBase - 30;
         testAngle = (testAngle + 360) % 360;
 
@@ -293,7 +334,6 @@
         else if (testAngle > 270 && testAngle < 360) isPositive = (baseFunc === 'cos');
 
         currentAnsSign = isPositive ? '+' : '-';
-        
         currentAnsFunc = baseFunc;
         if (angleBase === 90 || angleBase === 270) {
             if (baseFunc === 'sin') currentAnsFunc = 'cos';
@@ -302,31 +342,16 @@
         }
 
         questionY = -100;
-        fallSpeed = 2.5 + (combo * 0.15); 
-        if(fallSpeed > 10) fallSpeed = 10;
+        
+        // --- 速度計算：基礎值 + Combo加成 + 時間加成 ---
+        let timeBonus = (100 - timeLeft) * 0.03; // 每過一秒增加 0.03 速度
+        if (timeLeft <= 30) timeBonus += 2; // Final Rush 額外基礎速+2
+        
+        fallSpeed = 2.5 + (combo * 0.15) + timeBonus; 
+        if(fallSpeed > 15) fallSpeed = 15; // 限制最高速
         
         resetSelection();
     }
-
-    document.querySelectorAll('.sign-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if(!isPlaying) return;
-            document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('selected'));
-            e.target.classList.add('selected');
-            selectedSign = e.target.getAttribute('data-val');
-            checkAnswer();
-        });
-    });
-
-    document.querySelectorAll('.func-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if(!isPlaying) return;
-            document.querySelectorAll('.func-btn').forEach(b => b.classList.remove('selected'));
-            e.target.classList.add('selected');
-            selectedFunc = e.target.getAttribute('data-val');
-            checkAnswer();
-        });
-    });
 
     function resetSelection() {
         selectedSign = null;
@@ -468,13 +493,37 @@
 
         generateQuestion();
 
-        gameInterval = setInterval(() => {
+gameInterval = setInterval(() => {
             timeLeft--;
             timerEl.innerText = `${timeLeft} s`;
+
+            // 觸發 Final Rush 特效
+            if (timeLeft === 30) {
+                triggerFinalRush();
+            }
+
             if (timeLeft <= 0) {
                 endGame();
             }
         }, 1000);
+
+    function triggerFinalRush() {
+        const rushText = document.getElementById('final-rush-text');
+        const container = document.getElementById('game-container');
+        
+        // 顯示大文字動畫
+        rushText.style.display = 'block';
+        rushText.style.animation = 'rush-appear 1.5s forwards';
+        
+        // 螢幕開始閃爍
+        container.classList.add('final-rush-active');
+        
+        // 音樂加速 (HTML5 Audio 支援 playbackRate)
+        bgMusic.playbackRate = 1.3; 
+        
+        // 震動 (若設備支援)
+        if (window.navigator.vibrate) window.navigator.vibrate(500);
+    }
 
         fallInterval = setInterval(updateGameLoop, 16);
     }
