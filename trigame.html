@@ -365,7 +365,7 @@ function generateQuestion() {
         fallSpeed = baseSpeed + comboBonus + timeBonus; 
         
         // 限制最高速（建議設在 12，如果超過 15 掉落方塊可能會因為畫面更新率直接穿透底線判定）
-        if (fallSpeed > 12) fallSpeed = 12;
+        if (fallSpeed > 10) fallSpeed = 10;
         
         resetSelection();
     }
