@@ -344,12 +344,28 @@ function generateQuestion() {
 
         questionY = -100;
         
-        // --- 速度計算：基礎值 + Combo加成 + 時間加成 ---
-        let timeBonus = (100 - timeLeft) * 0.03; // 每過一秒增加 0.03 速度
-        if (timeLeft <= 30) timeBonus += 2; // Final Rush 額外基礎速+2
+       // --- 速度計算：初期放慢，後期加速感倍增 ---
+        let timeElapsed = 100 - timeLeft; // 計算遊戲已經經過了幾秒 (0 ~ 100)
         
-        fallSpeed = 2.5 + (combo * 0.15) + timeBonus; 
-        if(fallSpeed > 15) fallSpeed = 15; // 限制最高速
+        // 1. 基礎起步速度調降（原本 2.5 -> 改為 1.2，一開始很慢）
+        let baseSpeed = 1.2; 
+        
+        // 2. 時間加速幅度調高（原本每秒 0.03 -> 改為每秒 0.06，時間越久越快）
+        let timeBonus = timeElapsed * 0.06; 
+        
+        // 3. Final Rush 階段給予極大壓力
+        if (timeLeft <= 30) {
+            timeBonus += 2.5; 
+        }
+        
+        // 4. Combo 加成稍微降低，避免前期連擊讓速度突然爆衝（0.15 -> 0.1）
+        let comboBonus = combo * 0.1;
+        
+        // 總和計算
+        fallSpeed = baseSpeed + comboBonus + timeBonus; 
+        
+        // 限制最高速（建議設在 12，如果超過 15 掉落方塊可能會因為畫面更新率直接穿透底線判定）
+        if (fallSpeed > 12) fallSpeed = 12;
         
         resetSelection();
     }
