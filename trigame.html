@@ -172,24 +172,31 @@
         }
     }
 
-    // 將新分數寫入 Google Sheet
+// 將新分數寫入 Google Sheet (已加入 CORS 防護設定)
     async function saveScoreToLeaderboard(name, finalScore) {
-        // 先在介面上顯示「上傳中」
         document.getElementById('action-btn').innerText = "☁️ 正在上傳成績...";
         document.getElementById('action-btn').disabled = true;
 
         try {
             await fetch(SCRIPT_URL, {
                 method: 'POST',
+                // 加入 headers，告訴瀏覽器這是純文字，避免觸發嚴格的 CORS 檢查
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
                 body: JSON.stringify({ name: name, score: finalScore })
             });
-            // 上傳成功後，重新讀取最新的榜單
-            await loadLeaderboard();
+            
+            // 寫入後等待 1 秒讓 Google Sheet 處理，再重新讀取榜單
+            setTimeout(async () => {
+                await loadLeaderboard();
+                document.getElementById('action-btn').innerText = "再來一局";
+                document.getElementById('action-btn').disabled = false;
+            }, 1000);
+
         } catch(e) {
             console.error("上傳失敗", e);
-        } finally {
-            // 恢復按鈕
-            document.getElementById('action-btn').innerText = "再來一局";
+            document.getElementById('action-btn').innerText = "上傳失敗，點此重試";
             document.getElementById('action-btn').disabled = false;
         }
     }
