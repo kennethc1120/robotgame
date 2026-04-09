@@ -208,7 +208,9 @@
 
     let selectedSign = null;
     let selectedFunc = null;
-
+    // 👇 新增這個錯題本變數 👇
+    let wrongQuestions = {};
+    
     const funcs = ['sin', 'cos', 'tan'];
     const angles = [90, 180, 270, 360];
     const operators = ['+', '-'];
@@ -403,6 +405,14 @@ function generateQuestion() {
     }
 
    function handleWrongAnswer() {
+        // 👇 新增這段：記錄出錯的公式 👇
+        const currentQ = questionBox.innerText;
+        if (wrongQuestions[currentQ]) {
+            wrongQuestions[currentQ]++; // 錯第二次以上，次數 +1
+        } else {
+            wrongQuestions[currentQ] = 1; // 第一次錯，記為 1 次
+        }
+        // 👆 ---------------------- 👆
         combo = 0;
         checkFeverMode(); // 移除狂熱邊框
         score -= 50;
@@ -496,6 +506,9 @@ function generateQuestion() {
         // 抓取玩家姓名，沒輸入則給預設值
         const inputName = playerNameInput.value.trim();
         currentPlayerName = inputName !== "" ? inputName : "無名戰士";
+        // 👇 新增這行：清空上一局的錯題紀錄 👇
+        wrongQuestions = {}; 
+        
 
         overlayScreen.style.display = 'none';
         score = 0;
@@ -561,39 +574,61 @@ function endGame() {
         clearInterval(fallInterval);
         bgMusic.pause();
         
-        // 1. 先把結束畫面的文字準備好
-        document.getElementById('screen-title').innerText = "時間到！";
-        document.getElementById('screen-desc').innerHTML = `玩家 <b>${currentPlayerName}</b> 的最終分數：<br><strong style="color:#f9a826; font-size:48px; display:block; margin: 10px 0;">${score}</strong>`;
+        // --- 1. 計算稱號段位 ---
+        let title = "";
+        let titleColor = "";
+        if (score <= 1000) {
+            title = "🌱 三角初學小朋友";
+            titleColor = "#a8e6cf";
+        } else if (score <= 3000) {
+            title = "⚔️ 三角恆定式修行者";
+            titleColor = "#ffd3b6";
+        } else if (score <= 5000) {
+            title = "🧙‍♂️ sin cos tan 大師";
+            titleColor = "#ff8b94";
+        } else {
+            title = "👑 三角函數之神";
+            titleColor = "#f9a826";
+        }
+
+        // --- 2. 結算最常出錯的公式 (最多顯示 3 題) ---
+        // 將錯題本轉換成陣列並照錯誤次數排序 (由多到少)
+        let wrongArray = Object.entries(wrongQuestions).sort((a, b) => b[1] - a[1]);
+        let wrongHTML = "";
         
-        // 隱藏姓名輸入框，避免結束畫面太擁擠
+        if (wrongArray.length > 0) {
+            wrongHTML = `
+                <div style='margin-top: 15px; font-size: 16px; color: #ff5c77; text-align: left; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 92, 119, 0.5);'>
+                    <strong>💀 弱點回顧 (出錯次數)：</strong><br>
+            `;
+            let maxDisplay = Math.min(3, wrongArray.length);
+            for (let i = 0; i < maxDisplay; i++) {
+                wrongHTML += `• ${wrongArray[i][0]} (錯了 ${wrongArray[i][1]} 次)<br>`;
+            }
+            wrongHTML += "</div>";
+        } else {
+            // 如果玩家很強都沒錯
+            wrongHTML = "<div style='margin-top: 15px; font-size: 18px; color: #43ebda; text-shadow: 0 0 5px #43ebda;'>太神啦！一題都沒錯！🎉</div>";
+        }
+
+        // --- 3. 更新畫面文字 ---
+        document.getElementById('screen-title').innerText = "時間到！";
+        document.getElementById('screen-desc').innerHTML = `
+            玩家 <b>${currentPlayerName}</b><br>
+            獲得稱號：<span style="color:${titleColor}; font-weight:bold; font-size:24px;">${title}</span><br>
+            最終分數：<strong style="color:#f9a826; font-size:48px; display:block; margin: 10px 0;">${score}</strong>
+            ${wrongHTML}
+        `;
+        
+        // 隱藏姓名輸入框
         playerNameInput.style.display = 'none'; 
         
-        // 2. 顯示結束畫面與排行榜（解決定格問題）
+        // 顯示結束畫面與排行榜
         overlayScreen.style.display = 'flex';
 
-        // 3. 最後才觸發雲端上傳成績（裡面的程式會自動處理上傳與刷新榜單）
+        // 上傳成績
         saveScoreToLeaderboard(currentPlayerName, score);
     }
-    // --- 按鈕點擊事件監聽 ---
-    document.querySelectorAll('.sign-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if (!isPlaying) return; // 遊戲沒開始就不能按
-            document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('selected'));
-            e.target.classList.add('selected');
-            selectedSign = e.target.getAttribute('data-val');
-            checkAnswer();
-        });
-    });
-
-    document.querySelectorAll('.func-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if (!isPlaying) return; // 遊戲沒開始就不能按
-            document.querySelectorAll('.func-btn').forEach(b => b.classList.remove('selected'));
-            e.target.classList.add('selected');
-            selectedFunc = e.target.getAttribute('data-val');
-            checkAnswer();
-        });
-    });
 </script>
 
 </body>
