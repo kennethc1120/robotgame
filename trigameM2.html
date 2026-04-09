@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trig-Beat: ¤ÆÂ²¤T¨¤¨ç¼Æ 100 ¬í¬D¾Ô</title>
+    <title>Trig-Beat: åŒ–ç°¡ä¸‰è§’å‡½æ•¸ 100 ç§’æŒ‘æˆ°</title>
     <style>
         body { 
             margin: 0; padding: 0; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; 
@@ -138,20 +138,20 @@
 
 <div id="game-container">
     <div id="header">
-        <div id="score-display">¤À¼Æ: 0</div>
+        <div id="score-display">åˆ†æ•¸: 0</div>
         <div id="combo-display" style="opacity: 0;">Combo: 0</div>
         <div id="timer">100 s</div>
     </div>
 
     <div id="play-area">
         <div id="final-rush-text">FINAL RUSH!!</div>
-        <div id="question-box" class="falling-question" style="top: -100px;">sin(£k + x)</div>
+        <div id="question-box" class="falling-question" style="top: -100px;">sin(Ï€ + x)</div>
     </div>
 
     <div id="controls">
         <div class="control-group" style="flex: 0.6;">
-            <button class="btn sign-btn" style="flex: 1 1 80%;" data-val="+">¡Ï</button>
-            <button class="btn sign-btn" style="flex: 1 1 80%;" data-val="-">¡Ğ</button>
+            <button class="btn sign-btn" style="flex: 1 1 80%;" data-val="+">ï¼‹</button>
+            <button class="btn sign-btn" style="flex: 1 1 80%;" data-val="-">ï¼</button>
         </div>
         <div class="control-group" style="flex: 2;">
             <button class="btn func-btn" data-val="sin">sin x</button>
@@ -167,20 +167,20 @@
 </div>
 
 <div id="overlay-screen">
-    <h1 id="screen-title">TRIG-BEAT<br>¤ÆÂ²¤T¨¤¨ç¼Æ</h1>
+    <h1 id="screen-title">TRIG-BEAT<br>åŒ–ç°¡ä¸‰è§’å‡½æ•¸</h1>
     
     <div id="screen-desc" class="desc-box">
-        ?? ¥ı¿ï¥¿­t¸¹¡A¦A¿ï¨ç¼Æ¡C<br>
-        ?? °O¦í¡u¥¿­tÚ»¶H­­¡A³æÅÜÂù­øÅÜ¡v¡I<br>
-        ±¼¸¨¨ì©³³¡©Îµª¿ù±N¦© 50 ¤À¡I
+        ğŸ‘‰ å…ˆé¸æ­£è² è™Ÿï¼Œå†é¸å‡½æ•¸ã€‚<br>
+        ğŸ‘‰ è¨˜ä½ã€Œæ­£è² ç‡è±¡é™ï¼Œå–®è®Šé›™å””è®Šã€ï¼<br>
+        æ‰è½åˆ°åº•éƒ¨æˆ–ç­”éŒ¯å°‡æ‰£ 50 åˆ†ï¼
     </div>
 
-    <input type="text" id="player-name" placeholder="½Ğ¿é¤J§Aªº¼ÊºÙ..." maxlength="10">
+    <input type="text" id="player-name" placeholder="è«‹è¼¸å…¥ä½ çš„æš±ç¨±..." maxlength="10">
     
-    <button class="start-btn" onclick="startGame()" id="action-btn">¶}©l¬D¾Ô</button>
+    <button class="start-btn" onclick="startGame()" id="action-btn">é–‹å§‹æŒ‘æˆ°</button>
 
     <div id="leaderboard">
-        <h2>?? Àsªêº] Top 5 ??</h2>
+        <h2>ğŸ† é¾è™æ¦œ Top 5 ğŸ†</h2>
         <div id="leaderboard-list">
             </div>
     </div>
@@ -193,7 +193,7 @@
     let gameInterval;
     let fallInterval;
     let isPlaying = false;
-    let currentPlayerName = "µL¦W¾Ô¤h";
+    let currentPlayerName = "ç„¡åæˆ°å£«";
     
     let currentAnsSign = '';
     let currentAnsFunc = '';
@@ -204,17 +204,17 @@
     let selectedFunc = null;
     let wrongQuestions = {};
     
-    // ¥[¤J¤F sec, csc, cot
+    // åŠ å…¥äº† sec, csc, cot
     const funcs = ['sin', 'cos', 'tan', 'cot', 'sec', 'csc'];
     const angles = [90, 180, 270, 360];
     const operators = ['+', '-'];
     
-    // ¨¤«×¹ïÀ³©·«×ªº Mapping
+    // è§’åº¦å°æ‡‰å¼§åº¦çš„ Mapping
     const radianMap = {
-        90: '£k/2',
-        180: '£k',
-        270: '3£k/2',
-        360: '2£k'
+        90: 'Ï€/2',
+        180: 'Ï€',
+        270: '3Ï€/2',
+        360: '2Ï€'
     };
 
     const scoreEl = document.getElementById('score-display');
@@ -232,19 +232,19 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-89FN4ZOHRo-kqVhGBQ2V_rWRtrZtqcFUU7VkVSUjseyEpqj7vO2YILNRDtEknrnU/exec"; 
 
     async function loadLeaderboard() {
-        leaderboardList.innerHTML = '<div style="text-align:center; color:#ccc;">?? ¥¿¦b³s½u¶³ºİº]³æ...</div>';
+        leaderboardList.innerHTML = '<div style="text-align:center; color:#ccc;">ğŸ“¡ æ­£åœ¨é€£ç·šé›²ç«¯æ¦œå–®...</div>';
         try {
             const response = await fetch(SCRIPT_URL);
             const board = await response.json();
             updateLeaderboardUI(board);
         } catch(e) {
-            leaderboardList.innerHTML = '<div style="text-align:center; color:#e94560;">³s½u¥¢±Ñ¡A½ĞÀË¬dºô¸ô</div>';
+            leaderboardList.innerHTML = '<div style="text-align:center; color:#e94560;">é€£ç·šå¤±æ•—ï¼Œè«‹æª¢æŸ¥ç¶²è·¯</div>';
             console.error(e);
         }
     }
 
     async function saveScoreToLeaderboard(name, finalScore) {
-        document.getElementById('action-btn').innerText = "?? ¥¿¦b¤W¶Ç¦¨ÁZ...";
+        document.getElementById('action-btn').innerText = "â˜ï¸ æ­£åœ¨ä¸Šå‚³æˆç¸¾...";
         document.getElementById('action-btn').disabled = true;
 
         try {
@@ -258,13 +258,13 @@
             
             setTimeout(async () => {
                 await loadLeaderboard();
-                document.getElementById('action-btn').innerText = "¦A¨Ó¤@§½";
+                document.getElementById('action-btn').innerText = "å†ä¾†ä¸€å±€";
                 document.getElementById('action-btn').disabled = false;
             }, 1000);
 
         } catch(e) {
-            console.error("¤W¶Ç¥¢±Ñ", e);
-            document.getElementById('action-btn').innerText = "¤W¶Ç¥¢±Ñ¡AÂI¦¹­«¸Õ";
+            console.error("ä¸Šå‚³å¤±æ•—", e);
+            document.getElementById('action-btn').innerText = "ä¸Šå‚³å¤±æ•—ï¼Œé»æ­¤é‡è©¦";
             document.getElementById('action-btn').disabled = false;
         }
     }
@@ -273,7 +273,7 @@
         leaderboardList.innerHTML = ''; 
         
         if (board.length === 0) {
-            leaderboardList.innerHTML = '<div style="text-align:center; color:#ccc;">©|µL¬ö¿ı¡A§Ö¨Ó·m­º±ş¡I</div>';
+            leaderboardList.innerHTML = '<div style="text-align:center; color:#ccc;">å°šç„¡ç´€éŒ„ï¼Œå¿«ä¾†æ¶é¦–æ®ºï¼</div>';
             return;
         }
 
@@ -308,7 +308,7 @@
 
         const angleBase = availableAngles[Math.floor(Math.random() * availableAngles.length)];
         
-        // µe­±¤WÅã¥Ü¬° Radian ®æ¦¡
+        // ç•«é¢ä¸Šé¡¯ç¤ºç‚º Radian æ ¼å¼
         questionBox.innerText = `${baseFunc}(${radianMap[angleBase]} ${operator} x)`;
         
         questionBox.classList.remove('danger');
@@ -316,7 +316,7 @@
         let testAngle = operator === '+' ? angleBase + 30 : angleBase - 30;
         testAngle = (testAngle + 360) % 360;
 
-        // ¥[¤J©Ò¦³ªº¶H­­§P©w (ASTC)
+        // åŠ å…¥æ‰€æœ‰çš„è±¡é™åˆ¤å®š (ASTC)
         let isPositive = false;
         if (testAngle > 0 && testAngle < 90) isPositive = true;
         else if (testAngle > 90 && testAngle < 180) isPositive = (baseFunc === 'sin' || baseFunc === 'csc');
@@ -326,7 +326,7 @@
         currentAnsSign = isPositive ? '+' : '-';
         currentAnsFunc = baseFunc;
         
-        // ³æÅÜÂù­øÅÜ (©_ÅÜ°¸¤£ÅÜ) ªº©Ò¦³¨ç¼Æ¹ïÀ³Ãö«Y
+        // å–®è®Šé›™å””è®Š (å¥‡è®Šå¶ä¸è®Š) çš„æ‰€æœ‰å‡½æ•¸å°æ‡‰é—œä¿‚
         if (angleBase === 90 || angleBase === 270) {
             if (baseFunc === 'sin') currentAnsFunc = 'cos';
             else if (baseFunc === 'cos') currentAnsFunc = 'sin';
@@ -372,7 +372,7 @@
                 score += points;
                 
                 comboEl.style.opacity = 1;
-                comboEl.innerText = `Combo: ${combo} ??`;
+                comboEl.innerText = `Combo: ${combo} ğŸ”¥`;
                 updateScore();
                 triggerFlash('flash-green');
                 generateQuestion();
@@ -399,7 +399,7 @@
     }
 
     function updateScore() {
-        scoreEl.innerText = `¤À¼Æ: ${score}`;
+        scoreEl.innerText = `åˆ†æ•¸: ${score}`;
     }
 
     function triggerFlash(className) {
@@ -478,7 +478,7 @@
 
     function startGame() {
         const inputName = playerNameInput.value.trim();
-        currentPlayerName = inputName !== "" ? inputName : "µL¦W¾Ô¤h";
+        currentPlayerName = inputName !== "" ? inputName : "ç„¡åæˆ°å£«";
         wrongQuestions = {}; 
         
         overlayScreen.style.display = 'none';
@@ -498,7 +498,7 @@
         bgMusic.playbackRate = 1.0; 
         
         bgMusic.currentTime = 0;
-        bgMusic.play().catch(e => console.log("µ¥«İÂIÀ»¼½©ñ"));
+        bgMusic.play().catch(e => console.log("ç­‰å¾…é»æ“Šæ’­æ”¾"));
 
         generateQuestion();
 
@@ -541,16 +541,16 @@
         let title = "";
         let titleColor = "";
         if (score <= 1000) {
-            title = "?? ¤T¨¤ªì¾Ç¤pªB¤Í";
+            title = "ğŸŒ± ä¸‰è§’åˆå­¸å°æœ‹å‹";
             titleColor = "#a8e6cf";
         } else if (score <= 3000) {
-            title = "?? ¤T¨¤«í©w¦¡­×¦æªÌ";
+            title = "âš”ï¸ ä¸‰è§’æ†å®šå¼ä¿®è¡Œè€…";
             titleColor = "#ffd3b6";
         } else if (score <= 5000) {
-            title = "???¡ñ? sin cos tan ¤j®v";
+            title = "ğŸ§™â€â™‚ï¸ sin cos tan å¤§å¸«";
             titleColor = "#ff8b94";
         } else {
-            title = "?? ¤T¨¤¨ç¼Æ¤§¯«";
+            title = "ğŸ‘‘ ä¸‰è§’å‡½æ•¸ä¹‹ç¥";
             titleColor = "#f9a826";
         }
 
@@ -560,22 +560,22 @@
         if (wrongArray.length > 0) {
             wrongHTML = `
                 <div style='margin-top: 15px; font-size: 16px; color: #ff5c77; text-align: left; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 92, 119, 0.5);'>
-                    <strong>?? ®zÂI¦^ÅU (¥X¿ù¦¸¼Æ)¡G</strong><br>
+                    <strong>ğŸ’€ å¼±é»å›é¡§ (å‡ºéŒ¯æ¬¡æ•¸)ï¼š</strong><br>
             `;
             let maxDisplay = Math.min(3, wrongArray.length);
             for (let i = 0; i < maxDisplay; i++) {
-                wrongHTML += `¡E ${wrongArray[i][0]} (¿ù¤F ${wrongArray[i][1]} ¦¸)<br>`;
+                wrongHTML += `â€¢ ${wrongArray[i][0]} (éŒ¯äº† ${wrongArray[i][1]} æ¬¡)<br>`;
             }
             wrongHTML += "</div>";
         } else {
-            wrongHTML = "<div style='margin-top: 15px; font-size: 18px; color: #43ebda; text-shadow: 0 0 5px #43ebda;'>¤Ó¯«°Õ¡I¤@ÃD³£¨S¿ù¡I??</div>";
+            wrongHTML = "<div style='margin-top: 15px; font-size: 18px; color: #43ebda; text-shadow: 0 0 5px #43ebda;'>å¤ªç¥å•¦ï¼ä¸€é¡Œéƒ½æ²’éŒ¯ï¼ğŸ‰</div>";
         }
 
-        document.getElementById('screen-title').innerText = "®É¶¡¨ì¡I";
+        document.getElementById('screen-title').innerText = "æ™‚é–“åˆ°ï¼";
         document.getElementById('screen-desc').innerHTML = `
-            ª±®a <b>${currentPlayerName}</b><br>
-            Àò±oºÙ¸¹¡G<span style="color:${titleColor}; font-weight:bold; font-size:24px;">${title}</span><br>
-            ³Ì²×¤À¼Æ¡G<strong style="color:#f9a826; font-size:48px; display:block; margin: 10px 0;">${score}</strong>
+            ç©å®¶ <b>${currentPlayerName}</b><br>
+            ç²å¾—ç¨±è™Ÿï¼š<span style="color:${titleColor}; font-weight:bold; font-size:24px;">${title}</span><br>
+            æœ€çµ‚åˆ†æ•¸ï¼š<strong style="color:#f9a826; font-size:48px; display:block; margin: 10px 0;">${score}</strong>
             ${wrongHTML}
         `;
         
