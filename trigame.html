@@ -350,10 +350,10 @@ function generateQuestion() {
         let timeElapsed = 100 - timeLeft; // 計算遊戲已經經過了幾秒 (0 ~ 100)
         
         // 1. 基礎起步速度調降（原本 2.5 -> 改為 1.2，一開始很慢）
-        let baseSpeed = 1.2; 
+        let baseSpeed = 1.0; 
         
         // 2. 時間加速幅度調高（原本每秒 0.03 -> 改為每秒 0.06，時間越久越快）
-        let timeBonus = timeElapsed * 0.06; 
+        let timeBonus = timeElapsed * 0.05; 
         
         // 3. Final Rush 階段給予極大壓力
         if (timeLeft <= 30) {
@@ -367,7 +367,7 @@ function generateQuestion() {
         fallSpeed = baseSpeed + comboBonus + timeBonus; 
         
         // 限制最高速（建議設在 12，如果超過 15 掉落方塊可能會因為畫面更新率直接穿透底線判定）
-        if (fallSpeed > 10) fallSpeed = 10;
+        if (fallSpeed > 8) fallSpeed = 8;
         
         resetSelection();
     }
