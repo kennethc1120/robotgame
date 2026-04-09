@@ -629,6 +629,32 @@ function endGame() {
         // 上傳成績
         saveScoreToLeaderboard(currentPlayerName, score);
     }
+    // --- 按鈕點擊事件監聽 ---
+    document.querySelectorAll('.sign-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!isPlaying) return; // 遊戲沒開始就不能按
+            // 切換選中狀態
+            document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedSign = btn.getAttribute('data-val');
+            
+            // 如果函數也選好了，就判定
+            if (selectedFunc) checkAnswer();
+        });
+    });
+
+    document.querySelectorAll('.func-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!isPlaying) return; // 遊戲沒開始就不能按
+            // 切換選中狀態
+            document.querySelectorAll('.func-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedFunc = btn.getAttribute('data-val');
+            
+            // 如果正負號也選好了，就判定
+            if (selectedSign) checkAnswer();
+        });
+    });
 </script>
 
 </body>
