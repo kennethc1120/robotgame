@@ -304,27 +304,51 @@
 
     // --- 遊戲邏輯 ---
 function generateQuestion() {
-        const baseFunc = funcs[Math.floor(Math.random() * funcs.length)];
-        const operator = operators[Math.floor(Math.random() * operators.length)];
+        // --- 💀 斯巴達特訓系統 (30% 機率出現錯過的題目) ---
+        let isSpartan = false;
+        let sFunc, sAngle, sOp;
+        let wrongKeys = Object.keys(wrongQuestions);
+        
+        // 如果有錯題，且隨機抽籤抽中 30% 的機率
+        if (wrongKeys.length > 0 && Math.random() < 0.3) {
+            let randomWrongQ = wrongKeys[Math.floor(Math.random() * wrongKeys.length)];
+            // 利用 Regex 解析字串 (例如 "sin(180° + x)")
+            let match = randomWrongQ.match(/([a-z]{3})\((\d+)° ([+-]) x\)/);
+            if (match) {
+                sFunc = match[1];
+                sAngle = parseInt(match[2]);
+                sOp = match[3];
+                isSpartan = true;
+            }
+        }
+
+        // 如果觸發斯巴達模式就用錯題，否則正常隨機產生
+        const baseFunc = isSpartan ? sFunc : funcs[Math.floor(Math.random() * funcs.length)];
+        const operator = isSpartan ? sOp : operators[Math.floor(Math.random() * operators.length)];
         
         // --- 角度多樣化邏輯 ---
         let availableAngles;
         if (timeLeft > 70) {
-            // 前 30 秒：只出現 180, 360 (偶不變)
             availableAngles = [180, 360];
         } else if (timeLeft > 30) {
-            // 中間 40 秒：混合出現
             availableAngles = [90, 180, 270, 360];
         } else {
-            // 最後 30 秒：提高 90, 270 (奇變) 的出現機率
             availableAngles = [90, 90, 270, 270, 180, 360]; 
         }
 
-        const angleBase = availableAngles[Math.floor(Math.random() * availableAngles.length)];
+        const angleBase = isSpartan ? sAngle : availableAngles[Math.floor(Math.random() * availableAngles.length)];
+        
         questionBox.innerText = `${baseFunc}(${angleBase}° ${operator} x)`;
         
         // 移除舊的 danger 邏輯，改為純內部判斷
         questionBox.classList.remove('danger');
+        
+        // 如果是斯巴達錯題，讓方塊變成紅色警告玩家！
+        if (isSpartan) {
+            questionBox.classList.add('danger');
+        }
+
+        // ... 底下保留原本計算答案 (testAngle) 與落下速度的程式碼 ...
 
         // 答案邏輯不變
         let testAngle = operator === '+' ? angleBase + 30 : angleBase - 30;
