@@ -6,10 +6,14 @@
     <title>Trig-Beat: 化簡三角函數 100 秒太空挑戰 (M2版) </title>
     <style>
         body { 
-            margin: 0; padding: 0; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; 
-            background-image: url('./img/trigameM2_bg.png');
-            background-size: cover;
-            background-position: center;
+        margin: 0; padding: 0; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; 
+        /* 這裡改成黑色背景，當螢幕比例不符時會顯示為黑邊 */
+        background-color: #000; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
         }
 
         body::before {
@@ -24,8 +28,22 @@
             background-size: 100% 4px, 100% 100%; z-index: -1; pointer-events: none; opacity: 0.2;
         }
 
-        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; z-index: 1; }
-        
+        #game-container { 
+            position: relative; 
+            /* 給定一個固定的遊戲畫布尺寸，所有物理邏輯(如掉落距離)都以這個為主 */
+            width: 400px; 
+            height: 800px; 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 1; 
+            /* 把原本 body 的背景圖移到這裡，讓背景跟著遊戲框體縮放 */
+            background-image: url('./img/trigameM2_bg.png');
+            background-size: cover;
+            background-position: center;
+            transform-origin: center center; /* 從正中央開始縮放 */
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(67, 235, 218, 0.2); /* 幫遊戲邊界加個發光特效 */
+        }
         #header { display: flex; justify-content: space-between; padding: 15px 30px; background-color: rgba(10, 10, 20, 0.85); font-size: 24px; font-weight: bold; z-index: 10; border-bottom: 2px solid #43ebda; backdrop-filter: blur(5px); box-shadow: 0 0 20px #43ebda; }
         
         #timer { color: #ff004c; text-shadow: 0 0 10px #ff004c; }
@@ -189,6 +207,31 @@
 </div>
 
 <script>
+// ====== 畫面自動等比例縮放系統 ======
+function resizeGame() {
+    const gameContainer = document.getElementById('game-container');
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    // 我們設定的基準大小
+    const baseWidth = 400;
+    const baseHeight = 800;
+    
+    // 計算寬度與高度的縮放比例，取「較小」的那個，確保遊戲畫面絕對不會被裁切
+    const scaleX = windowWidth / baseWidth;
+    const scaleY = windowHeight / baseHeight;
+    const scale = Math.min(scaleX, scaleY);
+    
+    // 應用縮放
+    gameContainer.style.transform = `scale(${scale})`;
+}
+
+// 監聽視窗大小改變事件 (例如手機旋轉、電腦拉視窗)
+window.addEventListener('resize', resizeGame);
+
+// 網頁一載入就先執行一次，把大小調好
+resizeGame();
+    
     // 遊戲變數
     let score = 0;
     let combo = 0;
@@ -413,10 +456,10 @@
         if (!isPlaying) return;
         questionY += fallSpeed;
         questionBox.style.top = questionY + 'px';
-
-        if (cachedPlayAreaHeight > 0 && (questionY + cachedBoxHeight) > (cachedPlayAreaHeight - 20)) {
-            handleWrongAnswer();
-        }
+// 假設按鈕區塊大約佔了 150px，我們設定掉到 Y=600 的時候就算觸底失敗
+if (questionY > 600) {
+    handleWrongAnswer();
+}
     }
 
     function spawnHitText(y, type) {
