@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Trig-Beat: 化簡三角函數 100 秒太空挑戰 (M2版) </title>
     <style>
-        /* CSS 樣式完全保留，未做任何刪減以維持你原本的太空港視覺 */
         body { 
             margin: 0; padding: 0; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; 
             background-image: url('./img/trigameM2_bg.png');
@@ -170,7 +169,7 @@
 </div>
 
 <div id="overlay-screen">
-    <h1 id="screen-title">TRIG-BEAT<br>化簡三角函數<br>太空挑戰 (M2版) </h1>
+    <h1 id="screen-title">TRIG-BEAT<br>化簡三角函數<br>太空挑戰 (M22版) </h1>
     
     <div id="screen-desc" class="desc-box">
         👉 先選正負號，再選函數。<br>
@@ -208,7 +207,6 @@
     let selectedFunc = null;
     let wrongQuestions = {};
 
-    // 效能優化：快取高度，避免每次 requestAnimationFrame 重複抓取 DOM 高度 (Layout Thrashing)
     let cachedPlayAreaHeight = 0;
     let cachedBoxHeight = 0;
     
@@ -236,7 +234,6 @@
 
     bgMusic.volume = 0.4;
 
-    // --- 安全防護：XSS 過濾 ---
     function sanitizeHTML(str) {
         return str.replace(/[&<>'"]/g, 
             tag => ({
@@ -249,7 +246,6 @@
         );
     }
 
-    // --- 排行榜 (Google Sheet) 系統 ---
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNoznZhty_2Iqbv0Lb5cE_6HTokaYPrDux2sCbEN3kqT_T4Zj3voi8MT7zZnxoxvfR-Q/exec"; 
 
     async function loadLeaderboard() {
@@ -281,7 +277,6 @@
             }, 1000);
         } catch(e) {
             console.error("上傳失敗", e);
-            // 修復：給予誠實的 UI 提示，因為點擊後還是會執行 startGame()
             document.getElementById('action-btn').innerText = "上傳失敗 (點此再來一局)";
             document.getElementById('action-btn').disabled = false;
         }
@@ -297,7 +292,6 @@
             const row = document.createElement('div');
             row.className = 'lb-row';
             let rankClass = index === 0 ? 'lb-rank-1' : index === 1 ? 'lb-rank-2' : index === 2 ? 'lb-rank-3' : '';
-            // 已透過雲端抓取，確保安全顯示轉譯
             row.innerHTML = `<span class="${rankClass}">#${index + 1} ${sanitizeHTML(entry.name)}</span><span class="${rankClass}">${entry.score}</span>`;
             leaderboardList.appendChild(row);
         });
@@ -305,7 +299,6 @@
 
     loadLeaderboard();
 
-    // --- 遊戲邏輯 ---
     function generateQuestion() {
         const baseFunc = funcs[Math.floor(Math.random() * funcs.length)];
         const operator = operators[Math.floor(Math.random() * operators.length)];
@@ -320,7 +313,6 @@
         questionBox.innerText = `${baseFunc}(${radianMap[angleBase]} ${operator} x)`;
         questionBox.classList.remove('danger');
 
-        // 效能優化：在此時快取 DOM 尺寸，而不是在每 16ms 的迴圈中抓取
         setTimeout(() => {
             cachedPlayAreaHeight = playArea.offsetHeight;
             cachedBoxHeight = questionBox.offsetHeight;
@@ -422,7 +414,6 @@
         questionY += fallSpeed;
         questionBox.style.top = questionY + 'px';
 
-        // 效能優化：使用快取變數，告別 Layout Thrashing 卡頓
         if (cachedPlayAreaHeight > 0 && (questionY + cachedBoxHeight) > (cachedPlayAreaHeight - 20)) {
             handleWrongAnswer();
         }
@@ -478,12 +469,10 @@
     }
 
     function startGame() {
-        // 修復 Interval Leak：確保開局前清除所有殘留計時器，避免時間與掉落速度疊加
         clearInterval(gameInterval);
         clearInterval(fallInterval);
 
         const inputName = playerNameInput.value.trim();
-        // 加入 XSS 防護處理
         currentPlayerName = inputName !== "" ? sanitizeHTML(inputName) : "無名戰士";
         wrongQuestions = {}; 
 
@@ -572,7 +561,6 @@
         }
 
         document.getElementById('screen-title').innerText = "時間到！";
-        // 修復：寫入時已透過 sanitizeHTML 過濾，杜絕 XSS
         document.getElementById('screen-desc').innerHTML = `
             玩家 <b>${currentPlayerName}</b><br>
             獲得稱號：<span style="color:${titleColor}; font-weight:bold; font-size:24px; text-shadow: 0 0 5px ${titleColor};">${title}</span><br>
@@ -585,4 +573,51 @@
         saveScoreToLeaderboard(currentPlayerName, score);
     }
 
-    // 螢幕大小變更時，
+    // 螢幕大小變更時，重新計算快取高度，避免破圖或判定異常
+    window.addEventListener('resize', () => {
+        if (playArea && questionBox) {
+            cachedPlayAreaHeight = playArea.offsetHeight;
+            cachedBoxHeight = questionBox.offsetHeight;
+        }
+    });
+
+    // 綁定正負號按鈕事件
+    document.querySelectorAll('.sign-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!isPlaying) return;
+            document.querySelectorAll('.sign-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedSign = e.target.getAttribute('data-val');
+            checkAnswer();
+        });
+    });
+
+    // 綁定函數按鈕事件
+    document.querySelectorAll('.func-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (!isPlaying) return;
+            document.querySelectorAll('.func-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            selectedFunc = e.target.getAttribute('data-val');
+            checkAnswer();
+        });
+    });
+
+    // 鍵盤快速鍵支援
+    window.addEventListener('keydown', (e) => {
+        if (!isPlaying) return;
+        
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            document.querySelector('.sign-btn[data-val="+"]').click();
+        } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            document.querySelector('.sign-btn[data-val="-"]').click();
+        }
+        
+        const funcMap = { '1': 'sin', '2': 'cos', '3': 'tan', '4': 'cot', '5': 'sec', '6': 'csc' };
+        if (funcMap[e.key]) {
+            document.querySelector(`.func-btn[data-val="${funcMap[e.key]}"]`).click();
+        }
+    });
+</script>
+</body>
+</html>
