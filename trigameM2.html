@@ -30,19 +30,18 @@
 
         #game-container { 
             position: relative; 
-            /* 給定一個固定的遊戲畫布尺寸，所有物理邏輯(如掉落距離)都以這個為主 */
-            width: 400px; 
-            height: 800px; 
+            /* 換成你指定的新比例 */
+            width: 450px; 
+            height: 850px; 
             display: flex; 
             flex-direction: column; 
             z-index: 1; 
-            /* 把原本 body 的背景圖移到這裡，讓背景跟著遊戲框體縮放 */
             background-image: url('./img/trigameM2_bg.png');
             background-size: cover;
             background-position: center;
-            transform-origin: center center; /* 從正中央開始縮放 */
+            transform-origin: center center; 
             overflow: hidden;
-            box-shadow: 0 0 50px rgba(67, 235, 218, 0.2); /* 幫遊戲邊界加個發光特效 */
+            box-shadow: 0 0 50px rgba(67, 235, 218, 0.2); 
         }
         #header { display: flex; justify-content: space-between; padding: 15px 30px; background-color: rgba(10, 10, 20, 0.85); font-size: 24px; font-weight: bold; z-index: 10; border-bottom: 2px solid #43ebda; backdrop-filter: blur(5px); box-shadow: 0 0 20px #43ebda; }
         
@@ -213,16 +212,14 @@ function resizeGame() {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     
-    // 我們設定的基準大小
-    const baseWidth = 400;
-    const baseHeight = 800;
+    // 配合 CSS 的設定，更新基準大小
+    const baseWidth = 450;
+    const baseHeight = 850;
     
-    // 計算寬度與高度的縮放比例，取「較小」的那個，確保遊戲畫面絕對不會被裁切
     const scaleX = windowWidth / baseWidth;
     const scaleY = windowHeight / baseHeight;
     const scale = Math.min(scaleX, scaleY);
     
-    // 應用縮放
     gameContainer.style.transform = `scale(${scale})`;
 }
 
@@ -391,19 +388,19 @@ let timeElapsed = 100 - timeLeft;
 let baseSpeed = 0.6; 
 
 // 2. 隨時間增加的難度 (原本乘 0.03，調降成 0.01，讓它慢慢變快)
-let timeBonus = timeElapsed * 0.01; 
+let timeBonus = timeElapsed * 0.02; 
 
 // 3. 最後 30 秒 (Final Rush) 的額外加速 (原本加 1.0，調降成只加 0.5)
-if (timeLeft <= 30) timeBonus += 0.5; 
+if (timeLeft <= 30) timeBonus += 1.0; 
 
 // 4. 連擊帶來的加速 (原本乘 0.1，調降成 0.05)
-let comboBonus = combo * 0.05;
+let comboBonus = combo * 0.1;
 
 // 計算總速度
 fallSpeed = baseSpeed + comboBonus + timeBonus; 
 
 // 5. 最高速度限制！(原本高達 6.5，現在限制最高只能到 3.0)
-if (fallSpeed > 3.0) fallSpeed = 3.0;
+if (fallSpeed > 4.5) fallSpeed = 4.5;
         
         resetSelection();
     }
@@ -465,15 +462,16 @@ if (fallSpeed > 3.0) fallSpeed = 3.0;
         setTimeout(() => flashOverlay.className = '', 150);
     }
 
-    function updateGameLoop() {
-        if (!isPlaying) return;
-        questionY += fallSpeed;
-        questionBox.style.top = questionY + 'px';
-// 假設按鈕區塊大約佔了 150px，我們設定掉到 Y=600 的時候就算觸底失敗
-if (questionY > 600) {
-    handleWrongAnswer();
-}
+function updateGameLoop() {
+    if (!isPlaying) return;
+    questionY += fallSpeed;
+    questionBox.style.top = questionY + 'px';
+
+    // 高度拉長到 850 後，Y 大約大於 680 就算觸底失敗
+    if (questionY > 680) {
+        handleWrongAnswer();
     }
+}
 
     function spawnHitText(y, type) {
         const text = document.createElement('div');
