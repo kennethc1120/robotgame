@@ -384,13 +384,26 @@ resizeGame();
 
         questionY = -100;
         
-        let timeElapsed = 100 - timeLeft; 
-        let baseSpeed = 1.0; 
-        let timeBonus = timeElapsed * 0.03; 
-        if (timeLeft <= 30) timeBonus += 1.0; 
-        let comboBonus = combo * 0.1;
-        fallSpeed = baseSpeed + comboBonus + timeBonus; 
-        if (fallSpeed > 6.5) fallSpeed = 6.5;
+// ====== 速度調整區塊 ======
+let timeElapsed = 100 - timeLeft; 
+
+// 1. 初始基本速度 (原本是 1.0，調慢成 0.6)
+let baseSpeed = 0.6; 
+
+// 2. 隨時間增加的難度 (原本乘 0.03，調降成 0.01，讓它慢慢變快)
+let timeBonus = timeElapsed * 0.01; 
+
+// 3. 最後 30 秒 (Final Rush) 的額外加速 (原本加 1.0，調降成只加 0.5)
+if (timeLeft <= 30) timeBonus += 0.5; 
+
+// 4. 連擊帶來的加速 (原本乘 0.1，調降成 0.05)
+let comboBonus = combo * 0.05;
+
+// 計算總速度
+fallSpeed = baseSpeed + comboBonus + timeBonus; 
+
+// 5. 最高速度限制！(原本高達 6.5，現在限制最高只能到 3.0)
+if (fallSpeed > 3.0) fallSpeed = 3.0;
         
         resetSelection();
     }
