@@ -414,13 +414,13 @@ function generateQuestion() {
         }
         
         // 4. Combo 加成維持
-        let comboBonus = combo * 0.1;
+        let comboBonus = combo * 0.75;
         
         // 總和計算
         fallSpeed = baseSpeed + comboBonus + timeBonus; 
         
         // 5. 限制最高速（從 8 降到 6.5，確保方塊不會快到像閃現）
-        if (fallSpeed > 6.5) fallSpeed = 6.5;
+        if (fallSpeed > 4.5) fallSpeed = 4.5;
         
         resetSelection();
     }
